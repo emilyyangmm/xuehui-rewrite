@@ -132,7 +132,9 @@ export default function StudioPage() {
       });
       const d = await res.json();
       if (!d.success) throw new Error(d.error);
-      setRewrittenScript(d.result?.script || "");
+      // 兼容两种返回格式
+      const rewrittenText = d.rewritten_text || d.result?.script || "";
+      setRewrittenScript(rewrittenText);
       setTitles(d.result?.topics?.slice(0, 5) || []);
     } catch (e: any) { setErr(e.message); }
     finally { setRewriting(false); }
