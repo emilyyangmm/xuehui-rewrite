@@ -78,8 +78,19 @@ export default function StudioPage() {
       });
       const d = await res.json();
       if (!d.success) throw new Error(d.error);
-      setAuthorInfo(d.author);
-      setVideos(d.videos || []);
+      setAuthorInfo(d.author || { nickname: "博主", avatar: "", followers: 0, total_likes: 0 });
+      // 字段映射：后端返回字段 -> 前端使用字段
+      setVideos((d.videos || []).map((v: any) => ({
+        id: v.aweme_id,
+        title: v.title,
+        description: v.title,
+        cover: v.cover,
+        play_count: v.plays || 0,
+        like_count: v.likes || 0,
+        comment_count: v.comments || 0,
+        video_url: v.video_url,
+        author: "",
+      })));
       if (d.videos?.length === 1) {
         setOriginalScript(d.videos[0].description || d.videos[0].title || "");
       }
