@@ -24,6 +24,26 @@ const VIRAL_ELEMENTS = [
 
 const INDUSTRIES = ["职场","教育","美妆","母婴","健身","美食","情感","科技","穿搭","家居","宠物","财经"];
 
+// 构建带认证信息的请求头（JSON 请求用）
+function getHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const douyinCookie = typeof localStorage !== "undefined" ? localStorage.getItem("douyin_cookie") : null;
+  const qwenKey = typeof localStorage !== "undefined" ? localStorage.getItem("qwen_key") : null;
+  if (douyinCookie) headers["X-Douyin-Cookie"] = douyinCookie;
+  if (qwenKey) headers["X-Qwen-Key"] = qwenKey;
+  return headers;
+}
+
+// 构建带认证信息的请求头（FormData 请求用，不设置 Content-Type）
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const douyinCookie = typeof localStorage !== "undefined" ? localStorage.getItem("douyin_cookie") : null;
+  const qwenKey = typeof localStorage !== "undefined" ? localStorage.getItem("qwen_key") : null;
+  if (douyinCookie) headers["X-Douyin-Cookie"] = douyinCookie;
+  if (qwenKey) headers["X-Qwen-Key"] = qwenKey;
+  return headers;
+}
+
 function pollTask(taskId: string, onDone: (d: any) => void, onError: (e: string) => void) {
   const iv = setInterval(async () => {
     try {
@@ -73,7 +93,7 @@ export default function StudioPage() {
     try {
       const res = await fetch("/api/fetch-videos", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ url: douyinUrl, sortBy }),
       });
       const d = await res.json();
@@ -107,7 +127,7 @@ export default function StudioPage() {
     try {
       const res = await fetch("/api/asr", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ video_url: v.video_url }),
       });
       const data = await res.json();
@@ -127,7 +147,7 @@ export default function StudioPage() {
       const els = selectedElements.map(id => VIRAL_ELEMENTS.find(e => e.id === id)!);
       const res = await fetch("/api/rewrite", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ text: originalScript, industry, scriptType: "teach", selectedElements: els, selectedHooks: [] }),
       });
       const d = await res.json();
@@ -148,7 +168,7 @@ export default function StudioPage() {
       const fd = new FormData();
       fd.append("text", text);
       fd.append("voice", selectedVoice);
-      const r = await fetch(`${API}/generate-audio`, { method: "POST", body: fd });
+      const r = await fetch(`${API}/generate-audio`, { method: "POST", headers: getAuthHeaders(), body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
@@ -165,7 +185,7 @@ export default function StudioPage() {
       const fd = new FormData();
       fd.append("source_image", sourceImage);
       fd.append("template", "default");
-      const r = await fetch(`${API}/generate-video`, { method: "POST", body: fd });
+      const r = await fetch(`${API}/generate-video`, { method: "POST", headers: getAuthHeaders(), body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
@@ -183,7 +203,7 @@ export default function StudioPage() {
       fd.append("video_url", rawVideoUrl);
       fd.append("audio_url", audioUrl);
       fd.append("subtitle_text", rewrittenScript || originalScript);
-      const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
+      const r = await fetch(`${API}/merge`, { method: "POST", headers: getAuthHeaders(), body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
