@@ -83,15 +83,18 @@ export default function StudioPage() {
     if (!douyinUrl.trim()) return;
     setFetchingScript(true); setErr(""); setVideos([]); setAuthorInfo(null);
     try {
-      const res = await fetch("/api/fetch-videos", {
+      const cookie = localStorage.getItem("douyin_cookie") || "";
+      const res = await fetch(`${API}/user-videos`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ url: douyinUrl, sortBy }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Douyin-Cookie": cookie,
+        },
+        body: JSON.stringify({ url: douyinUrl, sort_by: sortBy === "like" ? "likes" : "play", count: 20 }),
       });
       const d = await res.json();
-      if (!d.success) throw new Error(d.error);
-      setAuthorInfo(d.author || { nickname: "博主", avatar: "", followers: 0, total_likes: 0 });
-      // 字段映射：后端返回字段 -> 前端使用字段
+      if (!d.success && d.error) throw new Error(d.error);
+      setAuthorInfo({ nickname: "博主", avatar: "", followers: 0, total_likes: 0 });
       setVideos((d.videos || []).map((v: any) => ({
         id: v.aweme_id,
         title: v.title,
@@ -100,12 +103,7 @@ export default function StudioPage() {
         play_count: v.plays || 0,
         like_count: v.likes || 0,
         comment_count: v.comments || 0,
-        video_url: v.video_url,
-        author: "",
       })));
-      if (d.videos?.length === 1) {
-        setOriginalScript(d.videos[0].description || d.videos[0].title || "");
-      }
     } catch (e: any) { setErr(e.message); }
     finally { setFetchingScript(false); }
   };
