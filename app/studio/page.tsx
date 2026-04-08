@@ -142,14 +142,18 @@ export default function StudioPage() {
       const res = await fetch("/api/rewrite", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ text: originalScript, industry, scriptType: "teach", selectedElements: els, selectedHooks: [] }),
+        body: JSON.stringify({ 
+          text: originalScript, 
+          industry: "auto",  // 自动识别
+          scriptType: "teach", 
+          selectedElements: els, 
+          selectedHooks: [] 
+        }),
       });
       const d = await res.json();
       if (!d.success) throw new Error(d.error);
-      // 兼容两种返回格式
-      const rewrittenText = d.rewritten_text || d.result?.script || "";
-      setRewrittenScript(rewrittenText);
-      setTitles(d.result?.topics?.slice(0, 5) || []);
+      setRewrittenScript(d.result?.script || d.result?.rewritten || "");
+      setTitles(d.result?.topics || []);
     } catch (e: any) { setErr(e.message); }
     finally { setRewriting(false); }
   };
@@ -173,14 +177,12 @@ export default function StudioPage() {
   };
 
   const genVideo = async () => {
-    if (!sourceImage) { setErr("请上传照片"); return; }
-    if (!drivingVideo) { setErr("请上传驱动视频"); return; }
+    if (!drivingVideo) { setErr("请上传你的视频"); return; }
     setGeneratingVideo(true); setRawVideoUrl(""); setErr("");
     try {
       const fd = new FormData();
-      fd.append("source_image", sourceImage);
       fd.append("driving_video", drivingVideo);
-      const r = await fetch(`${API}/generate-video`, { method: "POST", headers: getAuthHeaders(), body: fd });
+      const r = await fetch(`${API}/generate-video`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
@@ -288,10 +290,7 @@ export default function StudioPage() {
                   </button>
                 ))}
               </div>
-              <div style={{ display: "flex", gap: 5 }}>
-                <select value={industry} onChange={e => setIndustry(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-                  {INDUSTRIES.map(i => <option key={i}>{i}</option>)}
-                </select>
+              <div style={{ marginTop: 8 }}>
                 <Btn onClick={rewrite} loading={rewriting} color="#818cf8">⚡ 薛辉改写</Btn>
               </div>
             </Section>
