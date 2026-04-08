@@ -66,6 +66,7 @@ export default function StudioPage() {
 
   const [sourceImage, setSourceImage] = useState<File | null>(null);
   const [sourcePreview, setSourcePreview] = useState("");
+  const [drivingVideo, setDrivingVideo] = useState<File | null>(null);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [rawVideoUrl, setRawVideoUrl] = useState("");
 
@@ -75,6 +76,7 @@ export default function StudioPage() {
   const [copiedTitle, setCopiedTitle] = useState(-1);
 
   const imgRef = useRef<HTMLInputElement>(null);
+  const vidRef = useRef<HTMLInputElement>(null);
 
   const toggleEl = (id: string) =>
     setSelectedElements(p => p.includes(id) ? p.filter(x => x !== id) : p.length < 3 ? [...p, id] : p);
@@ -171,12 +173,13 @@ export default function StudioPage() {
   };
 
   const genVideo = async () => {
-    if (!sourceImage) { setErr("请上传你的照片"); return; }
+    if (!sourceImage) { setErr("请上传照片"); return; }
+    if (!drivingVideo) { setErr("请上传驱动视频"); return; }
     setGeneratingVideo(true); setRawVideoUrl(""); setErr("");
     try {
       const fd = new FormData();
       fd.append("source_image", sourceImage);
-      fd.append("template", "default");
+      fd.append("driving_video", drivingVideo);
       const r = await fetch(`${API}/generate-video`, { method: "POST", headers: getAuthHeaders(), body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
@@ -350,21 +353,42 @@ export default function StudioPage() {
               )}
             </Section>
 
+            {/* 上传照片 */}
             <Section title="上传你的照片" icon="🖼">
-              <div style={{ fontSize: 11, color: "#475569", marginBottom: 6 }}>上传一张清晰正脸照片，系统自动生成你的数字人口播视频</div>
-              <div onClick={() => imgRef.current?.click()} style={{ border: "1px dashed #1e293b", borderRadius: 10, height: 150, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", background: "#0a0f1e" }}>
+              <div onClick={() => imgRef.current?.click()} style={{ border: "1px dashed #1e293b", borderRadius: 10, height: 120, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", background: "#0a0f1e" }}>
                 {sourcePreview ? (
                   <img src={sourcePreview} style={{ width: "100%", height: "100%", objectFit: "cover" as const }} />
                 ) : (
                   <div style={{ textAlign: "center" as const, color: "#334155" }}>
-                    <div style={{ fontSize: 32 }}>📷</div>
+                    <div style={{ fontSize: 28 }}>📷</div>
                     <div style={{ fontSize: 11, marginTop: 4 }}>点击上传正脸照片</div>
-                    <div style={{ fontSize: 10, color: "#1e293b", marginTop: 2 }}>JPG / PNG，建议正面清晰</div>
                   </div>
                 )}
                 <input ref={imgRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                   const f = e.target.files?.[0];
                   if (f) { setSourceImage(f); setSourcePreview(URL.createObjectURL(f)); }
+                }} />
+              </div>
+            </Section>
+
+            {/* 上传驱动视频 */}
+            <Section title="上传你的视频（不说话）" icon="🎬">
+              <div style={{ fontSize: 11, color: "#475569", marginBottom: 6 }}>录一段你不说话的视频（走路/站立/点头），系统会把你的动作套在照片上</div>
+              <div onClick={() => vidRef.current?.click()} style={{ border: "1px dashed #1e293b", borderRadius: 10, height: 80, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "#0a0f1e" }}>
+                {drivingVideo ? (
+                  <div style={{ textAlign: "center" as const, color: "#22d3ee" }}>
+                    <div style={{ fontSize: 16 }}>✓</div>
+                    <div style={{ fontSize: 11 }}>{drivingVideo.name}</div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: "center" as const, color: "#334155" }}>
+                    <div style={{ fontSize: 28 }}>🎥</div>
+                    <div style={{ fontSize: 11, marginTop: 4 }}>点击上传视频（MP4）</div>
+                  </div>
+                )}
+                <input ref={vidRef} type="file" accept="video/*" style={{ display: "none" }} onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) setDrivingVideo(f);
                 }} />
               </div>
               <div style={{ marginTop: 7 }}>
