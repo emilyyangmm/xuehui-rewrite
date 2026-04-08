@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     const videos = (data.videos || []).map((v: any) => ({
       id: v.aweme_id, title: v.title, description: v.title,
       cover: v.cover, play_count: v.plays, like_count: v.likes, comment_count: v.comments,
+      video_url: v.video_url,  // 确保视频URL被保留
     }));
     return NextResponse.json({ success: true, author: { nickname: "抖音博主" }, videos });
   } catch (e: any) {

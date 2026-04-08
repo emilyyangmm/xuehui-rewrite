@@ -107,6 +107,7 @@ export default function StudioPage() {
         play_count: v.plays || 0,
         like_count: v.likes || 0,
         comment_count: v.comments || 0,
+        video_url: v.video_url,  // 确保视频URL被保留
       })));
     } catch (e: any) { setErr(e.message); }
     finally { setFetchingScript(false); }
