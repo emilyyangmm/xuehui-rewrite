@@ -113,24 +113,39 @@ export default function StudioPage() {
   };
 
   const selectVideo = async (v: any) => {
+    setOriginalScript(v.title || ""); // 先填标题
     setRewrittenScript(""); setTitles([]);
-    // 先用标题占位
-    setOriginalScript(v.description || v.title || "");
     
-    // 异步调用后端提取真实口播文案
-    try {
-      const res = await fetch("/api/asr", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ video_url: v.video_url }),
-      });
-      const data = await res.json();
-      if (data.success && data.transcript) {
-        setOriginalScript(data.transcript);
+    // 如果有视频URL，用Whisper提取真实文案
+    if (v.video_url) {
+      setErr("正在提取视频文案…");
+      try {
+        const cookie = localStorage.getItem("douyin_cookie") || "";
+        const res = await fetch("/api/asr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ video_url: v.video_url, cookie }),
+        });
+        const d = await res.json();
+        if (d.success && d.task_id) {
+          // 轮询等待转录完成
+          const iv = setInterval(async () => {
+            const sr = await fetch(`${API}/status/${d.task_id}`);
+            const sd = await sr.json();
+            if (sd.status === "done") {
+              clearInterval(iv);
+              setOriginalScript(sd.transcript || v.title || "");
+              setErr("");
+            } else if (sd.status === "failed") {
+              clearInterval(iv);
+              setOriginalScript(v.title || "");
+              setErr("");
+            }
+          }, 3000);
+        }
+      } catch {
+        setErr("");
       }
-    } catch (e) {
-      // 提取失败就用标题，不影响流程
-      console.log("文字提取失败，使用标题");
     }
   };
 
