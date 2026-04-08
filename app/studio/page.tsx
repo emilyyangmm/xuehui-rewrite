@@ -24,30 +24,22 @@ const VIRAL_ELEMENTS = [
 
 const INDUSTRIES = ["职场","教育","美妆","母婴","健身","美食","情感","科技","穿搭","家居","宠物","财经"];
 
-// 构建带认证信息的请求头（JSON 请求用）
-function getHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const douyinCookie = typeof localStorage !== "undefined" ? localStorage.getItem("douyin_cookie") : null;
-  const qwenKey = typeof localStorage !== "undefined" ? localStorage.getItem("qwen_key") : null;
-  if (douyinCookie) headers["X-Douyin-Cookie"] = douyinCookie;
-  if (qwenKey) headers["X-Qwen-Key"] = qwenKey;
-  return headers;
-}
-
-// 构建带认证信息的请求头（FormData 请求用，不设置 Content-Type）
+// 获取认证 headers
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
-  const douyinCookie = typeof localStorage !== "undefined" ? localStorage.getItem("douyin_cookie") : null;
-  const qwenKey = typeof localStorage !== "undefined" ? localStorage.getItem("qwen_key") : null;
-  if (douyinCookie) headers["X-Douyin-Cookie"] = douyinCookie;
-  if (qwenKey) headers["X-Qwen-Key"] = qwenKey;
+  if (typeof localStorage !== "undefined") {
+    const cookie = localStorage.getItem("douyin_cookie");
+    const key = localStorage.getItem("qwen_key");
+    if (cookie) headers["X-Douyin-Cookie"] = cookie;
+    if (key) headers["X-Qwen-Key"] = key;
+  }
   return headers;
 }
 
 function pollTask(taskId: string, onDone: (d: any) => void, onError: (e: string) => void) {
   const iv = setInterval(async () => {
     try {
-      const r = await fetch(`${API}/status/${taskId}`);
+      const r = await fetch(`${API}/status/${taskId}`, { headers: getAuthHeaders() });
       const d = await r.json();
       if (d.status === "done") { clearInterval(iv); onDone(d); }
       else if (d.status === "failed") { clearInterval(iv); onError(d.error || "生成失败"); }
@@ -93,7 +85,7 @@ export default function StudioPage() {
     try {
       const res = await fetch("/api/fetch-videos", {
         method: "POST",
-        headers: getHeaders(),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ url: douyinUrl, sortBy }),
       });
       const d = await res.json();
@@ -127,7 +119,7 @@ export default function StudioPage() {
     try {
       const res = await fetch("/api/asr", {
         method: "POST",
-        headers: getHeaders(),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ video_url: v.video_url }),
       });
       const data = await res.json();
@@ -147,7 +139,7 @@ export default function StudioPage() {
       const els = selectedElements.map(id => VIRAL_ELEMENTS.find(e => e.id === id)!);
       const res = await fetch("/api/rewrite", {
         method: "POST",
-        headers: getHeaders(),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ text: originalScript, industry, scriptType: "teach", selectedElements: els, selectedHooks: [] }),
       });
       const d = await res.json();

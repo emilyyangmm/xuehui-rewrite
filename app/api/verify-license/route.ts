@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-const BACKEND_URL = process.env.BACKEND_URL || "https://u946450-b2d1-6dbf3f52.westc.seetacloud.com:8443";
+const API = "https://u946450-b29a-1d68bd35.westd.seetacloud.com:8443";
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const res = await fetch(`${BACKEND_URL}/verify-license`, {
+    const body = await req.json();
+    const res = await fetch(`${API}/verify-license`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ activation_code: body.activation_code }),
     });
     const data = await res.json();
-    return NextResponse.json(data);
-  } catch {
-    return NextResponse.json({ valid: false, error: "验证失败" });
+    return NextResponse.json({ valid: data.success, ...data });
+  } catch (e: any) {
+    return NextResponse.json({ valid: false, error: e.message }, { status: 500 });
   }
 }

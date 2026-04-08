@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-const BACKEND_URL = process.env.BACKEND_URL || "https://u946450-b2d1-6dbf3f52.westc.seetacloud.com:8443";
+const API = "https://u946450-b29a-1d68bd35.westd.seetacloud.com:8443";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const res = await fetch(`${BACKEND_URL}/machine-code`);
+    const res = await fetch(`${API}/machine-code`);
     const data = await res.json();
     return NextResponse.json(data);
-  } catch {
-    return NextResponse.json({ machine_code: "获取失败，请检查后端连接" });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
