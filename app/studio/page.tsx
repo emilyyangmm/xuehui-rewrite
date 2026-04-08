@@ -86,14 +86,16 @@ export default function StudioPage() {
       const cookie = localStorage.getItem("douyin_cookie") || "";
       const res = await fetch(`${API}/user-videos`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Douyin-Cookie": cookie,
-        },
-        body: JSON.stringify({ url: douyinUrl, sort_by: sortBy === "like" ? "likes" : "play", count: 20 }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: douyinUrl,
+          sort_by: sortBy === "like" ? "likes" : "play",
+          count: 20,
+          cookie: cookie,  // Cookie 放 body 里
+        }),
       });
       const d = await res.json();
-      if (!d.success && d.error) throw new Error(d.error);
+      if (d.error) throw new Error(d.error);
       setAuthorInfo({ nickname: "博主", avatar: "", followers: 0, total_likes: 0 });
       setVideos((d.videos || []).map((v: any) => ({
         id: v.aweme_id,
