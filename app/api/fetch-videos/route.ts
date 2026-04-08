@@ -1,29 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || "https://u946450-b2d1-6dbf3f52.westc.seetacloud.com:8443";
+const API = "https://u946450-b29a-1d68bd35.westd.seetacloud.com:8443";
+const DOUYIN_COOKIE = process.env.DOUYIN_COOKIE || "";
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const { url, sortBy } = await request.json();
-    
-    if (!url) {
-      return NextResponse.json({ success: false, error: "请提供抖音链接" }, { status: 400 });
-    }
-    
-    // 调用后端获取用户视频
-    const res = await fetch(`${BACKEND_URL}/user-videos`, {
+    const body = await req.json();
+    const res = await fetch(`${API}/user-videos`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, sort_by: sortBy || "play" }),
+      headers: {
+        "Content-Type": "application/json",
+        "X-Douyin-Cookie": DOUYIN_COOKIE,
+      },
+      body: JSON.stringify({
+        url: body.url,
+        sort_by: body.sortBy === "like" ? "likes" : "play",
+        count: 20,
+      }),
     });
-    
-    if (!res.ok) {
-      return NextResponse.json({ success: false, error: `后端调用失败: ${res.status}` }, { status: 500 });
-    }
-    
     const data = await res.json();
-    return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (!data.success) throw new Error(data.error || "获取失败");
+
+    // 转换格式兼容前端
+    const videos = (data.videos || []).map((v: any) => ({
+      id: v.aweme_id,
+      title: v.title,
+      description: v.title,
+      cover: v.cover,
+      play_count: v.plays,
+      like_count: v.likes,
+      comment_count: v.comments,
+    }));
+
+    return NextResponse.json({ success: true, author: { nickname: "抖音博主" }, videos });
+  } catch (e: any) {
+    return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
 }
