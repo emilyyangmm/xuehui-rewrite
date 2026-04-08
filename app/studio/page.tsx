@@ -114,37 +114,32 @@ export default function StudioPage() {
   };
 
   const selectVideo = async (v: any) => {
-    setOriginalScript(v.title || ""); // 先填标题
+    setOriginalScript(v.title || "");
     setRewrittenScript(""); setTitles([]);
     
-    // 如果有视频URL，用Whisper提取真实文案
+    console.log("video_url:", v.video_url); // 调试用
+    
     if (v.video_url) {
-      setErr("正在提取视频文案…");
+      setErr("正在提取视频文案，约1-2分钟…");
       try {
         const cookie = localStorage.getItem("douyin_cookie") || "";
+        const payload = { video_url: v.video_url, cookie };
+        console.log("发送payload:", JSON.stringify(payload).slice(0, 100));
+        
         const res = await fetch("/api/asr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ video_url: v.video_url, cookie }),
+          body: JSON.stringify(payload),
         });
         const d = await res.json();
-        if (d.success && d.task_id) {
-          // 轮询等待转录完成
-          const iv = setInterval(async () => {
-            const sr = await fetch(`${API}/status/${d.task_id}`);
-            const sd = await sr.json();
-            if (sd.status === "done") {
-              clearInterval(iv);
-              setOriginalScript(sd.transcript || v.title || "");
-              setErr("");
-            } else if (sd.status === "failed") {
-              clearInterval(iv);
-              setOriginalScript(v.title || "");
-              setErr("");
-            }
-          }, 3000);
+        console.log("asr响应:", d);
+        if (d.task_id) {
+          pollTask(d.task_id,
+            (sd) => { setOriginalScript(sd.transcript || v.title || ""); setErr(""); },
+            () => { setOriginalScript(v.title || ""); setErr(""); }
+          );
         }
-      } catch {
+      } catch (e) {
         setErr("");
       }
     }
