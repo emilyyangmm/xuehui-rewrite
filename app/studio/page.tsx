@@ -149,22 +149,18 @@ export default function StudioPage() {
     if (!originalScript.trim()) return;
     setRewriting(true); setErr("");
     try {
-      const els = selectedElements.map(id => VIRAL_ELEMENTS.find(e => e.id === id)!);
-      const res = await fetch("/api/rewrite", {
+      const qwenKey = localStorage.getItem("qwen_key") || "";
+      const res = await fetch(`${API}/rewrite`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ 
-          text: originalScript, 
-          industry: "auto",  // 自动识别
-          scriptType: "teach", 
-          selectedElements: els, 
-          selectedHooks: [] 
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Qwen-Key": qwenKey,
+        },
+        body: JSON.stringify({ text: originalScript }),
       });
       const d = await res.json();
-      if (!d.success) throw new Error(d.error);
-      setRewrittenScript(d.result?.script || d.result?.rewritten || "");
-      setTitles(d.result?.topics || []);
+      setRewrittenScript(d.result || "");
+      setTitles([]);
     } catch (e: any) { setErr(e.message); }
     finally { setRewriting(false); }
   };
