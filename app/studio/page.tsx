@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 
-const API = "https://u946450-9e0c-47062337.westb.seetacloud.com:8443";
+const API = "https://u946450-9535-4a766e61.westb.seetacloud.com:8443";
 
 const VOICES = [
   { id: "xiaoxiao", name: "晓晓", desc: "温柔女声" },
