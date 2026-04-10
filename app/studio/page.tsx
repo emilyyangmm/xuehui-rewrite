@@ -185,10 +185,17 @@ export default function StudioPage() {
 
   const genVideo = async () => {
     if (!drivingVideo) { setErr("请上传你的视频"); return; }
+    if (!audioUrl) { setErr("请先生成音频"); return; }
     setGeneratingVideo(true); setRawVideoUrl(""); setErr("");
     try {
       const fd = new FormData();
-      fd.append("driving_video", drivingVideo);
+      fd.append("source_video", drivingVideo);  // 用户上传的视频
+      // 下载音频URL并转为File
+      const audioRes = await fetch(audioUrl);
+      const audioBlob = await audioRes.blob();
+      const audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
+      fd.append("audio_file", audioFile);
+      
       const r = await fetch(`${API}/generate-video`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
