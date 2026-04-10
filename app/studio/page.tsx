@@ -165,15 +165,14 @@ export default function StudioPage() {
     finally { setRewriting(false); }
   };
 
-  const genAudio = async () => {
-    const text = rewrittenScript || originalScript;
-    if (!text) { setErr("请先生成改写文案"); return; }
+  const generateAudio = async () => {
+    if (!rewrittenScript.trim()) { setErr("请先改写文案"); return; }
     setGeneratingAudio(true); setAudioUrl(""); setErr("");
     try {
       const fd = new FormData();
-      fd.append("text", text);
+      fd.append("text", rewrittenScript);
       fd.append("voice", selectedVoice);
-      const r = await fetch(`${API}/generate-audio`, { method: "POST", headers: getAuthHeaders(), body: fd });
+      const r = await fetch(`${API}/generate-audio`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
@@ -185,17 +184,14 @@ export default function StudioPage() {
 
   const genVideo = async () => {
     if (!drivingVideo) { setErr("请上传你的视频"); return; }
-    if (!audioUrl) { setErr("请先生成音频"); return; }
+    if (!audioUrl) { setErr("请先生成口播音频"); return; }
     setGeneratingVideo(true); setRawVideoUrl(""); setErr("");
     try {
+      // 先下载TTS音频
+      const audioBlob = await fetch(audioUrl).then(r => r.blob());
       const fd = new FormData();
-      fd.append("source_video", drivingVideo);  // 用户上传的视频
-      // 下载音频URL并转为File
-      const audioRes = await fetch(audioUrl);
-      const audioBlob = await audioRes.blob();
-      const audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
-      fd.append("audio_file", audioFile);
-      
+      fd.append("source_video", drivingVideo);
+      fd.append("audio_file", audioBlob, "audio.mp3");
       const r = await fetch(`${API}/generate-video`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
@@ -364,24 +360,6 @@ export default function StudioPage() {
                   <div style={{ fontSize: 10, color: "#22d3ee", marginTop: 3 }}>✓ 音频生成完成</div>
                 </div>
               )}
-            </Section>
-
-            {/* 上传照片 */}
-            <Section title="上传你的照片" icon="🖼">
-              <div onClick={() => imgRef.current?.click()} style={{ border: "1px dashed #1e293b", borderRadius: 10, height: 120, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", background: "#0a0f1e" }}>
-                {sourcePreview ? (
-                  <img src={sourcePreview} style={{ width: "100%", height: "100%", objectFit: "cover" as const }} />
-                ) : (
-                  <div style={{ textAlign: "center" as const, color: "#334155" }}>
-                    <div style={{ fontSize: 28 }}>📷</div>
-                    <div style={{ fontSize: 11, marginTop: 4 }}>点击上传正脸照片</div>
-                  </div>
-                )}
-                <input ref={imgRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
-                  const f = e.target.files?.[0];
-                  if (f) { setSourceImage(f); setSourcePreview(URL.createObjectURL(f)); }
-                }} />
-              </div>
             </Section>
 
             {/* 上传驱动视频 */}
