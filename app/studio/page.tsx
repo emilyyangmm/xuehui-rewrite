@@ -422,9 +422,18 @@ export default function StudioPage() {
                 )}
               </div>
               {(finalVideo || rawVideoUrl) && (
-                <a href={finalVideo || rawVideoUrl} download style={{ display: "block", marginTop: 7, padding: "8px", textAlign: "center" as const, borderRadius: 7, border: "1px solid #a78bfa", color: "#a78bfa", textDecoration: "none", fontSize: 12, background: "rgba(167,139,250,.08)" }}>
+                <button onClick={() => {
+                  const url = finalVideo || rawVideoUrl;
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'digital_human.mp4';
+                  a.target = '_blank';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }} style={{ display: "block", width: "100%", marginTop: 7, padding: "8px", textAlign: "center" as const, borderRadius: 7, border: "1px solid #a78bfa", color: "#a78bfa", textDecoration: "none", fontSize: 12, background: "rgba(167,139,250,.08)", cursor: "pointer" }}>
                   ⬇ 下载视频
-                </a>
+                </button>
               )}
             </Section>
 
