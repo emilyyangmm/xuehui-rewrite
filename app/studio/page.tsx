@@ -24,6 +24,54 @@ const VIRAL_ELEMENTS = [
 
 const INDUSTRIES = ["职场","教育","美妆","母婴","健身","美食","情感","科技","穿搭","家居","宠物","财经"];
 
+// BGM列表
+const BGM_LIST = [
+  { name: "无BGM", file: "" },
+  { name: "吉他扫弦", file: "吉他扫弦.WAV" },
+  { name: "培训欢快", file: "培训欢快BGM.mp3" },
+  { name: "培训营销", file: "培训营销BGM.mp3" },
+  { name: "宣传动感节奏", file: "宣传类动感节奏.WAV" },
+  { name: "家庭之歌1", file: "家庭之歌1.mp3" },
+  { name: "家庭之歌2", file: "家庭之歌2.mp3" },
+  { name: "恢弘史诗", file: "恢弘史诗.WAV" },
+  { name: "悬疑开头", file: "悬疑开头.WAV" },
+  { name: "抒情缓慢", file: "抒情缓慢.WAV" },
+  { name: "探索未知1", file: "探索未知1.mp3" },
+  { name: "探索未知2", file: "探索未知2.mp3" },
+  { name: "放松鼓点钢琴", file: "放松鼓点钢琴.WAV" },
+  { name: "旅行Vlog吉他", file: "旅行Vlog吉他.mp3" },
+  { name: "时尚动感", file: "时尚动感房客律动.WAV" },
+  { name: "晨光初照1", file: "晨光初照.mp3" },
+  { name: "晨光初照2", file: "晨光初照2.mp3" },
+  { name: "未来之声", file: "未来之声.mp3" },
+  { name: "欢快鼓点旅行", file: "欢快鼓点旅行vlog.mp3" },
+  { name: "活泼鼓点", file: "活泼鼓点.WAV" },
+  { name: "疗愈欢快", file: "疗愈欢快.mp3" },
+  { name: "舒缓BGM", file: "舒缓BGM.mp3" },
+  { name: "追梦之旅1", file: "追梦之旅1.mp3" },
+  { name: "追梦之旅2", file: "追梦之旅2.mp3" },
+  { name: "销售之歌1", file: "销售之歌1.mp3" },
+  { name: "销售之歌2", file: "销售之歌2.mp3" },
+  { name: "青春摇滚", file: "青春摇滚梦幻蒸汽.WAV" },
+  { name: "黄昏偏伤感", file: "黄昏偏伤感.WAV" },
+];
+
+// 字体列表
+const FONT_LIST = [
+  { name: "阿里妈妈数黑体", file: "AlimamaShuHeiTi-Bold.ttf" },
+  { name: "阿里巴巴普惠体Heavy", file: "AlibabaPuHuiTi-3-105-Heavy.ttf" },
+  { name: "阿里巴巴普惠体ExtraBold", file: "AlibabaPuHuiTi-3-95-ExtraBold.ttf" },
+  { name: "思源宋体Bold", file: "SourceHanSerifCN-Bold.otf" },
+  { name: "思源宋体Heavy", file: "SourceHanSerifCN-Heavy.otf" },
+  { name: "得意黑", file: "得意黑.otf" },
+  { name: "演示斜黑体", file: "演示斜黑体.otf" },
+  { name: "猫啃什锦黑", file: "猫啃什锦黑.ttf" },
+  { name: "胡晓波男神体", file: "胡晓波男神体.otf" },
+  { name: "江城律动宋", file: "江城律动宋.ttf" },
+  { name: "联想小新潮酷体", file: "联想小新潮酷体.ttf" },
+  { name: "新愚公拼搏体", file: "新愚公拼搏体.ttf" },
+];
+
 // 获取认证 headers
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -73,6 +121,8 @@ export default function StudioPage() {
   const [finalVideo, setFinalVideo] = useState("");
   const [finalVideoUrl, setFinalVideoUrl] = useState("");
   const [merging, setMerging] = useState(false);
+  const [bgmFile, setBgmFile] = useState("");
+  const [fontFile, setFontFile] = useState("AlimamaShuHeiTi-Bold.ttf");
   const [err, setErr] = useState("");
   const [copiedTitle, setCopiedTitle] = useState(-1);
 
@@ -191,7 +241,8 @@ export default function StudioPage() {
       fd.append("video_url", videoUrl);
       fd.append("audio_url", audioUrl);
       fd.append("subtitle_text", rewrittenScript);
-      fd.append("bgm_type", "轻快");
+      fd.append("bgm_file", bgmFile);
+      fd.append("font_file", fontFile);
       const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
@@ -416,6 +467,30 @@ export default function StudioPage() {
 
             <Section title="合并输出" icon="🎬">
               <div style={{ fontSize: 11, color: "#475569", marginBottom: 7 }}>将数字人视频 + 口播音频 + 字幕合并为最终视频</div>
+              
+              {/* BGM选择 */}
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:12, color:"#94a3b8", marginBottom:5}}>🎵 背景音乐</div>
+                <div style={{display:"flex", gap:6, alignItems:"center"}}>
+                  <select value={bgmFile} onChange={e => setBgmFile(e.target.value)}
+                    style={{flex:1, background:"#1e293b", border:"1px solid #334155", borderRadius:6, padding:"6px 8px", color:"white", fontSize:12}}>
+                    {BGM_LIST.map(b => <option key={b.file} value={b.file}>{b.name}</option>)}
+                  </select>
+                  {bgmFile && (
+                    <audio controls src={`${API}/bgm/${bgmFile}`} style={{height:32, flex:1}} />
+                  )}
+                </div>
+              </div>
+
+              {/* 字体选择 */}
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:12, color:"#94a3b8", marginBottom:5}}>🔤 字幕字体</div>
+                <select value={fontFile} onChange={e => setFontFile(e.target.value)}
+                  style={{width:"100%", background:"#1e293b", border:"1px solid #334155", borderRadius:6, padding:"6px 8px", color:"white", fontSize:12}}>
+                  {FONT_LIST.map(f => <option key={f.file} value={f.file}>{f.name}</option>)}
+                </select>
+              </div>
+
               <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
                 <StatusRow label="口播音频" done={done.audio} />
                 <StatusRow label="数字人视频" done={done.video} />
