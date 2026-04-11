@@ -71,6 +71,7 @@ export default function StudioPage() {
   const [rawVideoUrl, setRawVideoUrl] = useState("");
 
   const [finalVideo, setFinalVideo] = useState("");
+  const [finalVideoUrl, setFinalVideoUrl] = useState("");
   const [merging, setMerging] = useState(false);
   const [err, setErr] = useState("");
   const [copiedTitle, setCopiedTitle] = useState(-1);
@@ -182,6 +183,25 @@ export default function StudioPage() {
     } catch (e: any) { setErr(e.message); setGeneratingAudio(false); }
   };
 
+  const autoMerge = async (videoUrl: string) => {
+    if (!audioUrl || !rewrittenScript) return;
+    setMerging(true);
+    try {
+      const fd = new FormData();
+      fd.append("video_url", videoUrl);
+      fd.append("audio_url", audioUrl);
+      fd.append("subtitle_text", rewrittenScript);
+      fd.append("bgm_type", "轻快");
+      const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      pollTask(d.task_id,
+        (sd) => { setFinalVideoUrl(sd.video_url); setMerging(false); },
+        (e) => { setErr(e); setMerging(false); }
+      );
+    } catch (e: any) { setErr(e.message); setMerging(false); }
+  };
+
   const genVideo = async () => {
     if (!drivingVideo) { setErr("请上传你的视频"); return; }
     if (!audioUrl) { setErr("请先生成口播音频"); return; }
@@ -196,7 +216,12 @@ export default function StudioPage() {
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
-        (data) => { setRawVideoUrl(data.video_url); setGeneratingVideo(false); },
+        (data) => { 
+          setRawVideoUrl(data.video_url); 
+          setGeneratingVideo(false);
+          // 自动触发合并
+          autoMerge(data.video_url);
+        },
         (e) => { setErr(e); setGeneratingVideo(false); }
       );
     } catch (e: any) { setErr(e.message); setGeneratingVideo(false); }
@@ -228,7 +253,7 @@ export default function StudioPage() {
 
   const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1) + "w" : String(n);
 
-  const done = { script: !!rewrittenScript, audio: !!audioUrl, video: !!rawVideoUrl, final: !!finalVideo };
+  const done = { script: !!rewrittenScript, audio: !!audioUrl, video: !!rawVideoUrl, merge: !!merging, final: !!finalVideoUrl };
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#060812", color: "#e2e8f0", fontFamily: "'PingFang SC','Hiragino Sans GB',sans-serif", overflow: "hidden" }}>
@@ -410,8 +435,8 @@ export default function StudioPage() {
 
             <Section title="视频预览" icon="▶">
               <div style={{ background: "#0a0f1e", borderRadius: 10, border: "1px solid #0f172a", overflow: "hidden", aspectRatio: "9/16", maxHeight: 360, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {finalVideo ? (
-                  <video src={finalVideo} controls style={{ width: "100%", height: "100%", objectFit: "contain" as const }} />
+                {finalVideoUrl ? (
+                  <video src={finalVideoUrl} controls style={{ width: "100%", height: "100%", objectFit: "contain" as const }} />
                 ) : rawVideoUrl ? (
                   <video src={rawVideoUrl} controls style={{ width: "100%", height: "100%", objectFit: "contain" as const }} />
                 ) : (
@@ -421,9 +446,9 @@ export default function StudioPage() {
                   </div>
                 )}
               </div>
-              {(finalVideo || rawVideoUrl) && (
+              {(finalVideoUrl || rawVideoUrl) && (
                 <button onClick={() => {
-                  const url = finalVideo || rawVideoUrl;
+                  const url = finalVideoUrl || rawVideoUrl;
                   const a = document.createElement('a');
                   a.href = url;
                   a.download = 'digital_human.mp4';
@@ -462,7 +487,7 @@ export default function StudioPage() {
                 <StatusRow label="文案改写" done={done.script} />
                 <StatusRow label="音频生成" done={done.audio} />
                 <StatusRow label="数字人视频" done={done.video} />
-                <StatusRow label="最终合成" done={done.final} />
+                <StatusRow label="最终合成" done={done.final} loading={done.merge && !done.final} />
               </div>
             </Section>
           </div>
@@ -493,12 +518,13 @@ function Section({ title, icon, children }: { title: string; icon: string; child
   );
 }
 
-function StatusRow({ label, done }: { label: string; done: boolean }) {
+function StatusRow({ label, done, loading }: { label: string; done: boolean; loading?: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 8px", background: "#0a0f1e", borderRadius: 5 }}>
-      <div style={{ width: 7, height: 7, borderRadius: "50%", background: done ? "#22d3ee" : "#1e293b", boxShadow: done ? "0 0 5px #22d3ee" : "none", flexShrink: 0 }} />
-      <span style={{ fontSize: 11, color: done ? "#94a3b8" : "#334155" }}>{label}</span>
+      <div style={{ width: 7, height: 7, borderRadius: "50%", background: done ? "#22d3ee" : loading ? "#f59e0b" : "#1e293b", boxShadow: done ? "0 0 5px #22d3ee" : loading ? "0 0 5px #f59e0b" : "none", flexShrink: 0 }} />
+      <span style={{ fontSize: 11, color: done ? "#94a3b8" : loading ? "#f59e0b" : "#334155" }}>{label}</span>
       {done && <span style={{ marginLeft: "auto", fontSize: 10, color: "#22d3ee" }}>✓</span>}
+      {loading && <span style={{ marginLeft: "auto", fontSize: 10, color: "#f59e0b" }}>⏳</span>}
     </div>
   );
 }
