@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 
-const API = "https://u946450-a5fc-9c0da63f.westb.seetacloud.com:8443";
+const API = "https://u946450-b388-482a6a22.westb.seetacloud.com:8443";
 
 const VOICES = [
   { id: "xiaoxiao", name: "晓晓", desc: "温柔女声" },
@@ -123,11 +123,20 @@ export default function StudioPage() {
   const [merging, setMerging] = useState(false);
   const [bgmFile, setBgmFile] = useState("");
   const [fontFile, setFontFile] = useState("AlimamaShuHeiTi-Bold.ttf");
+  
+  // 声音克隆相关
+  const [voiceMode, setVoiceMode] = useState<"edge-tts" | "clone">("edge-tts");
+  const [voiceSample, setVoiceSample] = useState<File | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceSpeed, setVoiceSpeed] = useState(1.0);
+  const [transcribing, setTranscribing] = useState(false);
+  
   const [err, setErr] = useState("");
   const [copiedTitle, setCopiedTitle] = useState(-1);
 
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
+  const voiceRef = useRef<HTMLInputElement>(null);
 
   const toggleEl = (id: string) =>
     setSelectedElements(p => p.includes(id) ? p.filter(x => x !== id) : p.length < 3 ? [...p, id] : p);
@@ -216,13 +225,44 @@ export default function StudioPage() {
     finally { setRewriting(false); }
   };
 
+  // 识别声音样本
+  const transcribeVoice = async () => {
+    if (!voiceSample) { setErr("请先上传声音样本"); return; }
+    setTranscribing(true); setErr("");
+    try {
+      const fd = new FormData();
+      fd.append("audio", voiceSample);
+      const r = await fetch(`${API}/transcribe`, { method: "POST", body: fd });
+      const d = await r.json();
+      if (d.success) {
+        setVoiceTranscript(d.text || "");
+      } else {
+        setErr(d.error || "识别失败");
+      }
+    } catch (e: any) { setErr(e.message); }
+    finally { setTranscribing(false); }
+  };
+
+  // 生成音频
   const generateAudio = async () => {
     if (!rewrittenScript.trim()) { setErr("请先改写文案"); return; }
     setGeneratingAudio(true); setAudioUrl(""); setErr("");
     try {
       const fd = new FormData();
       fd.append("text", rewrittenScript);
-      fd.append("voice", selectedVoice);
+      
+      if (voiceMode === "clone") {
+        // 克隆声音模式
+        fd.append("mode", "clone");
+        fd.append("voice_sample", voiceSample!);
+        fd.append("voice_text", voiceTranscript);
+        fd.append("speed", voiceSpeed.toString());
+      } else {
+        // edge-tts 模式
+        fd.append("mode", "edge-tts");
+        fd.append("voice", selectedVoice);
+      }
+      
       const r = await fetch(`${API}/generate-audio`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
@@ -418,14 +458,77 @@ export default function StudioPage() {
           <div style={{ flex: 1, overflowY: "auto", padding: "0 0 20px" }}>
 
             <Section title="声音选择" icon="🎙">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-                {VOICES.map(v => (
-                  <button key={v.id} onClick={() => setSelectedVoice(v.id)} style={{ padding: "7px 8px", borderRadius: 7, border: "1px solid", borderColor: selectedVoice === v.id ? "#22d3ee" : "#1e293b", background: selectedVoice === v.id ? "rgba(34,211,238,.08)" : "#0a0f1e", cursor: "pointer", textAlign: "left" as const }}>
-                    <div style={{ fontWeight: 600, fontSize: 12, color: selectedVoice === v.id ? "#22d3ee" : "#cbd5e1" }}>{v.name}</div>
-                    <div style={{ fontSize: 10, color: "#475569" }}>{v.desc}</div>
-                  </button>
-                ))}
+              {/* 声音模式切换 */}
+              <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
+                <button onClick={() => setVoiceMode("edge-tts")}
+                  style={{ flex: 1, padding: "8px", borderRadius: 7, border: "1px solid", borderColor: voiceMode === "edge-tts" ? "#22d3ee" : "#1e293b", background: voiceMode === "edge-tts" ? "rgba(34,211,238,.08)" : "#0a0f1e", cursor: "pointer", color: voiceMode === "edge-tts" ? "#22d3ee" : "#64748b", fontSize: 12 }}>
+                  系统声音
+                </button>
+                <button onClick={() => setVoiceMode("clone")}
+                  style={{ flex: 1, padding: "8px", borderRadius: 7, border: "1px solid", borderColor: voiceMode === "clone" ? "#22d3ee" : "#1e293b", background: voiceMode === "clone" ? "rgba(34,211,238,.08)" : "#0a0f1e", cursor: "pointer", color: voiceMode === "clone" ? "#22d3ee" : "#64748b", fontSize: 12 }}>
+                  克隆声音
+                </button>
               </div>
+
+              {voiceMode === "edge-tts" ? (
+                <>
+                  {/* edge-tts 声音选择 */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                    {VOICES.map(v => (
+                      <button key={v.id} onClick={() => setSelectedVoice(v.id)} style={{ padding: "7px 8px", borderRadius: 7, border: "1px solid", borderColor: selectedVoice === v.id ? "#22d3ee" : "#1e293b", background: selectedVoice === v.id ? "rgba(34,211,238,.08)" : "#0a0f1e", cursor: "pointer", textAlign: "left" as const }}>
+                        <div style={{ fontWeight: 600, fontSize: 12, color: selectedVoice === v.id ? "#22d3ee" : "#cbd5e1" }}>{v.name}</div>
+                        <div style={{ fontSize: 10, color: "#475569" }}>{v.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* 克隆声音模式 */}
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>上传声音样本</div>
+                    <div onClick={() => voiceRef.current?.click()} style={{ border: "1px dashed #334155", borderRadius: 7, padding: "12px", textAlign: "center", cursor: "pointer", background: "#0a0f1e" }}>
+                      {voiceSample ? (
+                        <div style={{ color: "#22d3ee", fontSize: 12 }}>✓ {voiceSample.name}</div>
+                      ) : (
+                        <div style={{ color: "#475569", fontSize: 11 }}>点击上传音频（mp3/wav/m4a）</div>
+                      )}
+                    </div>
+                    <input ref={voiceRef} type="file" accept="audio/*" style={{ display: "none" }} onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) { setVoiceSample(f); setVoiceTranscript(""); }
+                    }} />
+                  </div>
+                  
+                  {voiceSample && (
+                    <>
+                      <button onClick={transcribeVoice} disabled={transcribing}
+                        style={{ width: "100%", padding: "8px", marginBottom: 10, borderRadius: 7, border: "none", background: "#1e293b", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>
+                        {transcribing ? "识别中…" : "🔍 识别文字"}
+                      </button>
+                      
+                      {voiceTranscript && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>识别结果（可编辑）</div>
+                          <textarea value={voiceTranscript} onChange={e => setVoiceTranscript(e.target.value)}
+                            rows={3} style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "8px", color: "white", fontSize: 11, resize: "vertical", boxSizing: "border-box" }} />
+                        </div>
+                      )}
+                      
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>语速：{voiceSpeed.toFixed(1)}x</div>
+                        <input type="range" min="0.8" max="1.5" step="0.1" value={voiceSpeed} onChange={e => setVoiceSpeed(parseFloat(e.target.value))}
+                          style={{ width: "100%", accentColor: "#22d3ee" }} />
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#475569" }}>
+                          <span>0.8x (慢)</span>
+                          <span>1.5x (快)</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
               <div style={{ marginTop: 7 }}>
                 <Btn onClick={generateAudio} loading={generatingAudio} color="#22d3ee" full>🎙 生成口播音频</Btn>
               </div>

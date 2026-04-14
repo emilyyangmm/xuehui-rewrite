@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-const API = "https://u946450-a5fc-9c0da63f.westb.seetacloud.com:8443";
+const API = "https://u946450-b388-482a6a22.westb.seetacloud.com:8443";
 
 export async function POST(req: NextRequest) {
   try {
