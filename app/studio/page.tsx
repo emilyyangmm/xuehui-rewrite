@@ -253,6 +253,8 @@ export default function StudioPage() {
 
       let endpoint = `${API}/generate-audio`;
 
+      console.log('voiceMode:', voiceMode, 'voiceTranscript:', voiceTranscript, 'voiceSample:', voiceSample);
+
       if (voiceMode === "clone") {
         // 克隆声音模式 → 调 /clone-tts
         if (!voiceSample) { setErr("请先上传声音样本"); setGeneratingAudio(false); return; }
