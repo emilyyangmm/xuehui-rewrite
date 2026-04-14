@@ -236,6 +236,7 @@ export default function StudioPage() {
       const d = await r.json();
       if (d.success) {
         setVoiceTranscript(d.text || "");
+        console.log("识别结果:", d.text);
       } else {
         setErr(d.error || "识别失败");
       }
