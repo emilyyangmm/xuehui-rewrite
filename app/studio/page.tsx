@@ -250,20 +250,22 @@ export default function StudioPage() {
     try {
       const fd = new FormData();
       fd.append("text", rewrittenScript);
-      
+
+      let endpoint = `${API}/generate-audio`;
+
       if (voiceMode === "clone") {
-        // 克隆声音模式
-        fd.append("mode", "clone");
-        fd.append("voice_sample", voiceSample!);
-        fd.append("voice_text", voiceTranscript);
+        // 克隆声音模式 → 调 /clone-tts
+        if (!voiceSample) { setErr("请先上传声音样本"); setGeneratingAudio(false); return; }
+        if (!voiceTranscript.trim()) { setErr("请先识别声音文字"); setGeneratingAudio(false); return; }
+        fd.append("prompt_text", voiceTranscript);
         fd.append("speed", voiceSpeed.toString());
+        fd.append("voice_sample", voiceSample);
+        endpoint = `${API}/clone-tts`;
       } else {
-        // edge-tts 模式
-        fd.append("mode", "edge-tts");
         fd.append("voice", selectedVoice);
       }
-      
-      const r = await fetch(`${API}/generate-audio`, { method: "POST", body: fd });
+
+      const r = await fetch(endpoint, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
