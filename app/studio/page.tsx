@@ -331,7 +331,9 @@ export default function StudioPage() {
       fd.append("video_url", rawVideoUrl);
       fd.append("audio_url", audioUrl);
       fd.append("subtitle_text", rewrittenScript || originalScript);
-      const r = await fetch(`${API}/merge`, { method: "POST", headers: getAuthHeaders(), body: fd });
+      fd.append("bgm_file", bgmFile);
+      fd.append("font_file", fontFile);
+      const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
