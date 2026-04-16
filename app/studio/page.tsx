@@ -619,7 +619,7 @@ export default function StudioPage() {
           <div style={{ flex: 1, overflowY: "auto", padding: "0 0 20px" }}>
 
             <Section title="视频预览" icon="▶">
-              <div style={{ background: "#0a0f1e", borderRadius: 10, border: "1px solid #0f172a", overflow: "hidden", aspectRatio: "9/16", maxHeight: 360, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ background: "#0a0f1e", borderRadius: 10, border: "1px solid #0f172a", overflow: "hidden", flex: 1, width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {finalVideoUrl ? (
                   <video src={finalVideoUrl} controls style={{ width: "100%", height: "100%", objectFit: "contain" as const }} />
                 ) : rawVideoUrl ? (
@@ -646,25 +646,6 @@ export default function StudioPage() {
                 </button>
               )}
             </Section>
-
-            <Section title="一键发布" icon="🚀">
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <button onClick={() => {
-                  const text = `${titles[0] || ""}\n\n${rewrittenScript || originalScript}\n\n#${industry} #干货分享 #涨知识`;
-                  navigator.clipboard.writeText(text);
-                  window.open("https://creator.douyin.com/creator-micro/content/upload", "_blank");
-                }} style={{ padding: "10px", borderRadius: 7, background: "linear-gradient(135deg,#a78bfa,#818cf8)", border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                  📱 复制文案 → 发布抖音
-                </button>
-                <button onClick={() => window.open("https://channels.weixin.qq.com/platform/post/create", "_blank")}
-                  style={{ padding: "9px", borderRadius: 7, background: "#0a0f1e", border: "1px solid #1e293b", color: "#64748b", fontSize: 12, cursor: "pointer" }}>
-                  🟢 发布视频号
-                </button>
-                <button onClick={() => window.open("https://www.xiaohongshu.com/publish/publish", "_blank")}
-                  style={{ padding: "9px", borderRadius: 7, background: "#0a0f1e", border: "1px solid #1e293b", color: "#64748b", fontSize: 12, cursor: "pointer" }}>
-                  📕 发布小红书
-                </button>
-              </div>
             </Section>
 
             <Section title="生产进度" icon="📊">
