@@ -292,7 +292,7 @@ export default function StudioPage() {
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
-        (sd) => { setFinalVideoUrl(data.video_url); setMerging(false); },
+        (sd) => { setFinalVideoUrl(sd.video_url); setMerging(false); },
         (e) => { setErr(e); setMerging(false); }
       );
     } catch (e: any) { setErr(e.message); setMerging(false); }
@@ -645,7 +645,6 @@ export default function StudioPage() {
                   ⬇ 下载视频
                 </button>
               )}
-            </Section>
             </Section>
 
             <Section title="生产进度" icon="📊">
