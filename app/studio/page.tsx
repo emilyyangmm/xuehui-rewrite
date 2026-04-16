@@ -674,10 +674,7 @@ export default function StudioPage() {
                 </select>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
-                <StatusRow label="口播音频" done={done.audio} />
-                <StatusRow label="数字人视频" done={done.video} />
-              </div>
+
               <Btn onClick={merge} loading={merging} color="#a78bfa" full>
                 {merging ? "合并中，请稍候…" : "⚡ 一键合并"}
               </Btn>
