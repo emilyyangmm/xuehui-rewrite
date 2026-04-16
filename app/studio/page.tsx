@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const API = "https://u946450-a783-20029e21.westc.seetacloud.com:8443";
 
@@ -124,6 +124,7 @@ export default function StudioPage() {
   const [transcribing, setTranscribing] = useState(false);
   
   const [err, setErr] = useState("");
+  const [history, setHistory] = useState<{task_id:string, video_url:string, time:string, subtitle:string}[]>([])
   const [copiedTitle, setCopiedTitle] = useState(-1);
 
   const imgRef = useRef<HTMLInputElement>(null);
@@ -344,6 +345,14 @@ export default function StudioPage() {
   const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1) + "w" : String(n);
 
   const done = { script: !!rewrittenScript, audio: !!audioUrl, video: !!rawVideoUrl, merge: !!merging, final: !!finalVideoUrl };
+
+  // 获取历史记录
+  useEffect(() => {
+    fetch(`${API}/history`)
+      .then(r => r.json())
+      .then(d => { if(d.success) setHistory(d.history) })
+      .catch(() => {})
+  }, [])
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#060812", color: "#e2e8f0", fontFamily: "'PingFang SC','Hiragino Sans GB',sans-serif", overflow: "hidden" }}>
@@ -638,6 +647,23 @@ export default function StudioPage() {
                 </button>
               )}
             </Section>
+
+
+            {history.length > 0 && (
+              <div style={{marginTop: 16}}>
+                <div style={{fontSize: 12, color: "#94a3b8", marginBottom: 8}}>📋 历史记录</div>
+                <div style={{display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto"}}>
+                  {history.map(h => (
+                    <div key={h.task_id}
+                      onClick={() => setFinalVideoUrl(h.video_url)}
+                      style={{background: "#1e293b", borderRadius: 8, padding: "8px 12px", cursor: "pointer", border: "1px solid #334155"}}>
+                      <div style={{fontSize: 11, color: "#64748b"}}>{h.time}</div>
+                      <div style={{fontSize: 12, color: "#e2e8f0", marginTop: 2}}>{h.subtitle}...</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Section title="生产进度" icon="📊">
               <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
