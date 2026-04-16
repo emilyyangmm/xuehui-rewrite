@@ -114,6 +114,7 @@ export default function StudioPage() {
   const [selectedElements, setSelectedElements] = useState<string[]>([]);
   const [industry, setIndustry] = useState("职场");
   const [titles, setTitles] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
 
   const [selectedVoice, setSelectedVoice] = useState("xiaoxiao");
   const [audioUrl, setAudioUrl] = useState("");
@@ -232,7 +233,25 @@ export default function StudioPage() {
       });
       const d = await res.json();
       setRewrittenScript(d.result || "");
-      setTitles([]);
+
+      // 自动生成标题
+      try {
+        const titleRes = await fetch(`${API}/generate-title`, {
+          method: "POST",
+          body: (() => { const fd = new FormData(); fd.append("text", d.result || ""); return fd })()
+        });
+        const titleData = await titleRes.json();
+        if (titleData.success && titleData.result) {
+          setTitles(titleData.result.titles || []);
+          setTags(titleData.result.tags || []);
+        } else {
+          setTitles([]);
+          setTags([]);
+        }
+      } catch {
+        setTitles([]);
+        setTags([]);
+      }
     } catch (e: any) { setErr(e.message); }
     finally { setRewriting(false); }
   };
@@ -501,7 +520,9 @@ export default function StudioPage() {
                     </div>
                   ))}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 4 }}>
-                    {["#" + industry, "#干货分享", "#涨知识", "#每日学习", "#实用技巧"].map(t => (
+                    {tags.length > 0 ? tags.map(t => (
+                      <span key={t} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 8, background: "rgba(34,211,238,.08)", border: "1px solid rgba(34,211,238,.15)", color: "#22d3ee" }}>#{t}</span>
+                    )) : ["#" + industry, "#干货分享", "#涨知识"].map(t => (
                       <span key={t} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 8, background: "rgba(34,211,238,.08)", border: "1px solid rgba(34,211,238,.15)", color: "#22d3ee" }}>{t}</span>
                     ))}
                   </div>
@@ -602,7 +623,7 @@ export default function StudioPage() {
 
             {/* 上传驱动视频 */}
             <Section title="上传你的视频（不说话）" icon="🎬">
-              <div style={{ fontSize: 11, color: "#475569", marginBottom: 6 }}>录一段你不说话的视频（走路/站立/点头），系统会把你的动作套在照片上</div>
+              <div style={{ fontSize: 11, color: "#475569", marginBottom: 6 }}>尽量正面对镜头，不要大幅度摇晃</div>
               <div onClick={() => vidRef.current?.click()} style={{ border: "1px dashed #1e293b", borderRadius: 10, height: 80, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "#0a0f1e" }}>
                 {drivingVideo ? (
                   <div style={{ textAlign: "center" as const, color: "#22d3ee" }}>
