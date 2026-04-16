@@ -58,18 +58,10 @@ const BGM_LIST = [
 
 // 字体列表
 const FONT_LIST = [
-  { name: "阿里妈妈数黑体", file: "AlimamaShuHeiTi-Bold.ttf" },
-  { name: "阿里巴巴普惠体Heavy", file: "AlibabaPuHuiTi-3-105-Heavy.ttf" },
-  { name: "阿里巴巴普惠体ExtraBold", file: "AlibabaPuHuiTi-3-95-ExtraBold.ttf" },
+  { name: "猫啃什锦黑", file: "猫啃什锦黑.ttf" },
   { name: "思源宋体Bold", file: "SourceHanSerifCN-Bold.otf" },
-  { name: "思源宋体Heavy", file: "SourceHanSerifCN-Heavy.otf" },
   { name: "得意黑", file: "得意黑.otf" },
   { name: "演示斜黑体", file: "演示斜黑体.otf" },
-  { name: "猫啃什锦黑", file: "猫啃什锦黑.ttf" },
-  { name: "胡晓波男神体", file: "胡晓波男神体.otf" },
-  { name: "江城律动宋", file: "江城律动宋.ttf" },
-  { name: "联想小新潮酷体", file: "联想小新潮酷体.ttf" },
-  { name: "新愚公拼搏体", file: "新愚公拼搏体.ttf" },
 ];
 
 // 获取认证 headers
