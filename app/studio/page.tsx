@@ -329,7 +329,7 @@ export default function StudioPage() {
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
-        (data) => { setFinalVideo(data.video_url); setMerging(false); },
+        (data) => { setFinalVideoUrl(data.video_url); setMerging(false); },
         (e) => { setErr(e); setMerging(false); }
       );
     } catch (e: any) { setErr(e.message); setMerging(false); }
