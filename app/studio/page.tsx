@@ -292,7 +292,7 @@ export default function StudioPage() {
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
-        (sd) => { setFinalVideoUrl(sd.video_url); setMerging(false); },
+        (sd) => { setFinalVideoUrl(data.video_url); setMerging(false); },
         (e) => { setErr(e); setMerging(false); }
       );
     } catch (e: any) { setErr(e.message); setMerging(false); }
@@ -316,7 +316,7 @@ export default function StudioPage() {
           setRawVideoUrl(data.video_url); 
           setGeneratingVideo(false);
           // 自动触发合并
-          autoMerge(data.video_url);
+          
         },
         (e) => { setErr(e); setGeneratingVideo(false); }
       );
