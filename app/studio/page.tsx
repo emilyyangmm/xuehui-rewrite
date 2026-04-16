@@ -88,6 +88,21 @@ function pollTask(taskId: string, onDone: (d: any) => void, onError: (e: string)
 }
 
 export default function StudioPage() {
+  const openSettings = () => {
+    setTempCookie(localStorage.getItem("douyin_cookie") || "");
+    setTempQwenKey(localStorage.getItem("qwen_key") || "");
+    setTempActivation(localStorage.getItem("activation_code") || "");
+    setSettingsOpen(true);
+  };
+
+  const saveSettings = () => {
+    localStorage.setItem("douyin_cookie", tempCookie);
+    localStorage.setItem("qwen_key", tempQwenKey);
+    localStorage.setItem("activation_code", tempActivation);
+    setSettingsOpen(false);
+  };
+
+
   const [douyinUrl, setDouyinUrl] = useState("");
   const [fetchingScript, setFetchingScript] = useState(false);
   const [sortBy, setSortBy] = useState<"play"|"like">("play");
@@ -114,6 +129,10 @@ export default function StudioPage() {
   const [finalVideoUrl, setFinalVideoUrl] = useState("");
   const [merging, setMerging] = useState(false);
   const [bgmFile, setBgmFile] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tempCookie, setTempCookie] = useState("");
+  const [tempQwenKey, setTempQwenKey] = useState("");
+  const [tempActivation, setTempActivation] = useState("");
   const [fontFile, setFontFile] = useState("AlimamaShuHeiTi-Bold.ttf");
   
   // 声音克隆相关
@@ -353,8 +372,39 @@ export default function StudioPage() {
       .then(d => { if(d.success) setHistory(d.history) })
       .catch(() => {})
   }, [])
+  
+  useEffect(() => {
+    setTempCookie(localStorage.getItem("douyin_cookie") || "");
+    setTempQwenKey(localStorage.getItem("qwen_key") || "");
+    setTempActivation(localStorage.getItem("activation_code") || "");
+  }, []);
 
   return (
+    <>
+      {/* 设置面板 */}
+      {settingsOpen && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#0f172a", borderRadius: 16, padding: 24, width: 400, border: "1px solid #1e293b" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 600 }}>⚙️ 账号设置</h2>
+              <button onClick={() => setSettingsOpen(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18 }}>✕</button>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>抖音 Cookie</div>
+              <textarea value={tempCookie} onChange={e => setTempCookie(e.target.value)} rows={3} style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11, resize: "vertical" }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>Qwen API Key</div>
+              <input value={tempQwenKey} onChange={e => setTempQwenKey(e.target.value)} placeholder="sk-..." style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11 }} />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>激活码</div>
+              <input value={tempActivation} onChange={e => setTempActivation(e.target.value)} placeholder="输入激活码..." style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11 }} />
+            </div>
+            <button onClick={saveSettings} style={{ width: "100%", background: "#6366f1", border: "none", borderRadius: 8, padding: "10px", color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>保存设置</button>
+          </div>
+        </div>
+      )}
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#060812", color: "#e2e8f0", fontFamily: "'PingFang SC','Hiragino Sans GB',sans-serif", overflow: "hidden" }}>
 
       {/* Header — fixed height, no overlap */}
@@ -362,6 +412,7 @@ export default function StudioPage() {
         <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#818cf8,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>⚡</div>
         <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "0.1em", background: "linear-gradient(90deg,#818cf8,#22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>DIGITAL STUDIO</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={openSettings} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: "4px 8px", color: "#64748b" }}>⚙️</button>
           {err && <span style={{ fontSize: 11, color: "#f87171", background: "rgba(248,113,113,.1)", padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(248,113,113,.2)", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⚠ {err}</span>}
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22d3ee", boxShadow: "0 0 6px #22d3ee" }} />
           <span style={{ fontSize: 10, color: "#334155", letterSpacing: "0.1em" }}>LIVE</span>
@@ -677,6 +728,7 @@ export default function StudioPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
