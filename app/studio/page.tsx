@@ -241,7 +241,7 @@ export default function StudioPage() {
           body: (() => { const fd = new FormData(); fd.append("text", d.result || ""); return fd })()
         });
         const titleData = await titleRes.json();
-        if (titleData.success && titleData.result) {
+        if (titleData.result) {
           setTitles(titleData.result.titles || []);
           setTags(titleData.result.tags || []);
         } else {
