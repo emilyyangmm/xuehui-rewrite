@@ -238,7 +238,7 @@ export default function StudioPage() {
           "Content-Type": "application/json",
           "X-Qwen-Key": qwenKey,
         },
-        body: JSON.stringify({ text: originalScript, script_type: scriptType }),
+        body: JSON.stringify({ text: originalScript, script_type: scriptType, viral_elements: selectedElements }),
       });
       const d = await res.json();
       setRewrittenScript(d.result || "");
