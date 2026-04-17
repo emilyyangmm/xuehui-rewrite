@@ -319,6 +319,7 @@ export default function StudioPage() {
       fd.append("subtitle_text", rewrittenScript);
       fd.append("bgm_file", bgmFile);
       fd.append("font_file", fontFile);
+      fd.append("invite_code", localStorage.getItem("invite_verified") || "");
       const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
@@ -364,6 +365,7 @@ export default function StudioPage() {
       fd.append("subtitle_text", rewrittenScript || originalScript);
       fd.append("bgm_file", bgmFile);
       fd.append("font_file", fontFile);
+      fd.append("invite_code", localStorage.getItem("invite_verified") || "");
       const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
@@ -386,7 +388,7 @@ export default function StudioPage() {
 
   // 获取历史记录
   useEffect(() => {
-    fetch(`${API}/history`)
+    fetch(`${API}/history?invite_code=${localStorage.getItem("invite_verified") || ""}`)
       .then(r => r.json())
       .then(d => { if(d.success) setHistory(d.history) })
       .catch(() => {})

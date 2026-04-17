@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+const API = "https://u946450-a783-20029e21.westc.seetacloud.com:8443";
+
 export default function InvitePage() {
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -19,7 +21,7 @@ export default function InvitePage() {
     setLoading(true);
     setErr("");
     try {
-      const res = await fetch("/api/verify-invite", {
+      const res = await fetch(`${API}/invite/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: code.trim() }),
@@ -29,7 +31,7 @@ export default function InvitePage() {
         localStorage.setItem("invite_verified", "true");
         router.replace("/studio");
       } else {
-        setErr(d.error || "邀请码无效");
+        setErr(d.message || d.error || "邀请码无效");
       }
     } catch {
       setErr("验证失败，请稍后重试");

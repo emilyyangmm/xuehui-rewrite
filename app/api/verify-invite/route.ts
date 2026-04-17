@@ -1,25 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const VALID_CODES = [
-  "xuehui2024",
-  "studio2024",
-  "free",
-  "test",
-];
+const API = "https://u946450-a783-20029e21.westc.seetacloud.com:8443";
 
 export async function POST(req: NextRequest) {
   try {
     const { code } = await req.json();
     if (!code) {
-      return NextResponse.json({ success: false, error: "请输入邀请码" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "请输入邀请码" }, { status: 400 });
     }
     
-    if (VALID_CODES.includes(code.trim())) {
-      return NextResponse.json({ success: true });
-    }
-    
-    return NextResponse.json({ success: false, error: "邀请码无效" });
+    const res = await fetch(`${API}/invite/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code.trim() }),
+    });
+    const data = await res.json();
+    return NextResponse.json(data);
   } catch (e: any) {
-    return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+    return NextResponse.json({ success: false, message: e.message }, { status: 500 });
   }
 }
