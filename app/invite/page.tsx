@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const API = "https://u946450-a783-20029e21.westc.seetacloud.com:8443";
+const API = "/api/backend";
 
 export default function InvitePage() {
   const router = useRouter();
@@ -11,7 +11,7 @@ export default function InvitePage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("invite_verified") === "true") {
+    if (localStorage.getItem("invite_code")) {
       router.replace("/studio");
     }
   }, [router]);
@@ -28,7 +28,7 @@ export default function InvitePage() {
       });
       const d = await res.json();
       if (d.success) {
-        localStorage.setItem("invite_verified", "true");
+        localStorage.setItem("invite_code", code.trim().toUpperCase());
         router.replace("/studio");
       } else {
         setErr(d.message || d.error || "邀请码无效");

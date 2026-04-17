@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 
-const API = "https://u946450-a783-20029e21.westc.seetacloud.com:8443";
+const API = "/api/backend";
 
 const VOICES = [
   { id: "xiaoxiao", name: "晓晓", desc: "温柔女声" },
@@ -328,7 +328,7 @@ export default function StudioPage() {
       fd.append("subtitle_text", rewrittenScript);
       fd.append("bgm_file", bgmFile);
       fd.append("font_file", fontFile);
-      fd.append("invite_code", localStorage.getItem("invite_verified") || "");
+      fd.append("invite_code", localStorage.getItem("invite_code") || "");
       const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
@@ -374,7 +374,7 @@ export default function StudioPage() {
       fd.append("subtitle_text", rewrittenScript || originalScript);
       fd.append("bgm_file", bgmFile);
       fd.append("font_file", fontFile);
-      fd.append("invite_code", localStorage.getItem("invite_verified") || "");
+      fd.append("invite_code", localStorage.getItem("invite_code") || "");
       const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
@@ -408,7 +408,7 @@ export default function StudioPage() {
   };
 
   useEffect(() => {
-    fetch(`${API}/history?invite_code=${localStorage.getItem("invite_verified") || ""}`)
+    fetch(`${API}/history?invite_code=${localStorage.getItem("invite_code") || ""}`)
       .then(r => r.json())
       .then(d => { if(d.success) setHistory(d.history) })
       .catch(() => {})
