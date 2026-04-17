@@ -614,7 +614,7 @@ export default function StudioPage() {
               <div style={{ marginTop: 7 }}>
                 <Btn onClick={generateAudio} loading={generatingAudio} color="#22d3ee" full>🎙 生成口播音频</Btn>
               </div>
-              {generatingAudio && <div style={{ fontSize: 11, color: "#475569", marginTop: 5 }}>⏳ 生成中，约10-20秒…</div>}
+              {generatingAudio && <div style={{ fontSize: 11, color: "#475569", marginTop: 5 }}>⏳ 生成中，约1-2分钟…</div>}
               {audioUrl && (
                 <div style={{ marginTop: 7 }}>
                   <audio src={audioUrl} controls style={{ width: "100%", height: 28 }} />
