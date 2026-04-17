@@ -11,6 +11,14 @@ const VOICES = [
   { id: "yunyang", name: "云扬", desc: "播音男声" },
 ];
 
+
+const SCRIPT_TYPES = [
+  "聊观点", "晒过程", "教知识", "讲故事", "尬段子", "说产品",
+  "做测评", "揭内幕", "做挑战", "做采访", "拍日常", "秀蜕变",
+  "搞辩论", "列清单", "看反应", "答粉丝", "搞联动", "幕后花絮",
+  "造热点", "打鸡血",
+];
+
 const VIRAL_ELEMENTS = [
   { id: "cost", icon: "💰", title: "成本", coreLogic: "花小钱办大事" },
   { id: "crowd", icon: "👥", title: "人群", coreLogic: "锁定特定群体" },
@@ -113,6 +121,7 @@ export default function StudioPage() {
   const [rewriting, setRewriting] = useState(false);
   const [selectedElements, setSelectedElements] = useState<string[]>([]);
   const [industry, setIndustry] = useState("职场");
+  const [scriptType, setScriptType] = useState("聊观点");
   const [titles, setTitles] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
 
@@ -229,7 +238,7 @@ export default function StudioPage() {
           "Content-Type": "application/json",
           "X-Qwen-Key": qwenKey,
         },
-        body: JSON.stringify({ text: originalScript }),
+        body: JSON.stringify({ text: originalScript, script_type: scriptType }),
       });
       const d = await res.json();
       setRewrittenScript(d.result || "");
@@ -387,6 +396,17 @@ export default function StudioPage() {
   const done = { script: !!rewrittenScript, audio: !!audioUrl, video: !!rawVideoUrl, merge: !!merging, final: !!finalVideoUrl };
 
   // 获取历史记录
+  const handleDeleteHistory = async (taskId: string) => {
+    try {
+      await fetch(`${API}/history/delete`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({task_id: taskId})
+      });
+      setHistory(history.filter(h => h.task_id !== taskId));
+    } catch {}
+  };
+
   useEffect(() => {
     fetch(`${API}/history?invite_code=${localStorage.getItem("invite_verified") || ""}`)
       .then(r => r.json())
@@ -486,6 +506,20 @@ export default function StudioPage() {
 
             <Section title="原始文案" icon="📄">
               <textarea value={originalScript} onChange={e => setOriginalScript(e.target.value)} placeholder="点击上方视频选取，或手动粘贴文案…" rows={4} style={taStyle} />
+            </Section>
+
+            <Section title="脚本类型" icon="📝">
+              <div style={{display: "flex", flexWrap: "wrap", gap: 6}}>
+                {SCRIPT_TYPES.map(t => (
+                  <button key={t} onClick={() => setScriptType(t)}
+                    style={{padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer",
+                      background: scriptType === t ? "rgba(129,140,248,.2)" : "#0a0f1e",
+                      border: "1px solid " + (scriptType === t ? "#818cf8" : "#1e293b"),
+                      color: scriptType === t ? "#818cf8" : "#475569"}}>
+                    {t}
+                  </button>
+                ))}
+              </div>
             </Section>
 
             <Section title="爆款元素（最多3个）" icon="🔥">
@@ -727,9 +761,15 @@ export default function StudioPage() {
                   {history.map(h => (
                     <div key={h.task_id}
                       onClick={() => setFinalVideoUrl(h.video_url)}
-                      style={{background: "#1e293b", borderRadius: 8, padding: "8px 12px", cursor: "pointer", border: "1px solid #334155"}}>
-                      <div style={{fontSize: 11, color: "#64748b"}}>{h.time}</div>
-                      <div style={{fontSize: 12, color: "#e2e8f0", marginTop: 2}}>{h.subtitle}...</div>
+                      style={{display: "flex", alignItems: "center", gap: 8, background: "#1e293b", borderRadius: 8, padding: "8px 12px", cursor: "pointer", border: "1px solid #334155"}}>
+                      <div style={{flex: 1, minWidth: 0}}>
+                        <div style={{fontSize: 11, color: "#64748b"}}>{h.time}</div>
+                        <div style={{fontSize: 12, color: "#e2e8f0", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{h.subtitle}...</div>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteHistory(h.task_id); }}
+                        style={{background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 12, padding: "4px"}}>
+                        🗑
+                      </button>
                     </div>
                   ))}
                 </div>
