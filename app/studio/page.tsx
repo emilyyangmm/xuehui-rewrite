@@ -569,7 +569,7 @@ export default function StudioPage() {
 
             <Section title="抖音链接" icon="🔗">
               <div style={{ display: "flex", gap: 5, marginBottom: 6 }}>
-                <input value={douyinUrl} onChange={e => setDouyinUrl(e.target.value)} placeholder="博主主页或单个视频链接…" style={inputStyle} onKeyDown={e => e.key === "Enter" && fetchScript()} />
+                <input value={douyinUrl} onChange={e => setDouyinUrl(e.target.value)} placeholder="粘贴博主主页链接…" style={inputStyle} onKeyDown={e => e.key === "Enter" && fetchScript()} />
                 <Btn onClick={fetchScript} loading={fetchingScript} color="#818cf8">拉取</Btn>
               </div>
               {/* 排序 */}
@@ -794,10 +794,20 @@ export default function StudioPage() {
                     style={{flex:1, background:"#1e293b", border:"1px solid #334155", borderRadius:6, padding:"6px 8px", color:"white", fontSize:12}}>
                     {BGM_LIST.map(b => <option key={b.file} value={b.file}>{b.name}</option>)}
                   </select>
-                  {bgmFile && (
-                    <audio controls src={`${API}/bgm/${bgmFile}`} style={{height:32, flex:1}} />
-                  )}
+                  <label style={{background:"#1e293b", border:"1px solid #334155", borderRadius:6, padding:"5px 10px", color:"#94a3b8", fontSize:11, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0}}>
+                    ＋上传
+                    <input type="file" accept="audio/*" style={{display:"none"}} onChange={async e => {
+                      const file = e.target.files?.[0]; if (!file) return;
+                      const fd = new FormData(); fd.append("file", file);
+                      const r = await fetch(`${API}/upload-bgm`, {method:"POST", body:fd});
+                      const d = await r.json();
+                      if (d.filename) { setBgmFile(d.filename); }
+                    }} />
+                  </label>
                 </div>
+                {bgmFile && (
+                  <audio controls src={`${API}/bgm/${bgmFile}`} style={{height:32, width:"100%", marginTop:6}} />
+                )}
               </div>
 
               {/* 字体选择 */}

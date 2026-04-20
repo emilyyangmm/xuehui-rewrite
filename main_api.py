@@ -798,18 +798,40 @@ def normalize_douyin_url(url: str) -> str:
     return url
 
 def run_download_transcribe(task_id, video_url, cookie, out_path):
-    """用 yt-dlp 下载抖音视频并转录"""
+    """用 yt-dlp Python API 下载抖音视频并转录"""
     tasks[task_id] = {"status": "running", "step": "下载视频"}
     video_url = normalize_douyin_url(video_url)
     try:
+        import yt_dlp, http.cookiejar
         video_path = f"{out_path}/source.mp4"
-        cmd = ["yt-dlp", "-o", video_path, "--no-playlist", "-q", "--merge-output-format", "mp4"]
+        jar = http.cookiejar.CookieJar()
         if cookie:
-            cmd += ["--add-header", f"Cookie:{cookie}"]
-        cmd.append(video_url)
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-        if result.returncode != 0 or not os.path.exists(video_path):
-            tasks[task_id] = {"status": "failed", "error": result.stderr[-300:] or "下载失败"}
+            import urllib.request as _ur
+            opener = _ur.build_opener(_ur.HTTPCookieProcessor(jar))
+            req = _ur.Request("https://www.douyin.com", headers={"Cookie": cookie, "User-Agent": "Mozilla/5.0"})
+            try: opener.open(req, timeout=5)
+            except: pass
+            # 手动添加 cookie 到 jar
+            for item in cookie.split("; "):
+                if "=" in item:
+                    k, v = item.split("=", 1)
+                    c = http.cookiejar.Cookie(
+                        version=0, name=k.strip(), value=v.strip(),
+                        port=None, port_specified=False,
+                        domain=".douyin.com", domain_specified=True, domain_initial_dot=True,
+                        path="/", path_specified=True, secure=False,
+                        expires=int(time.time()) + 86400 * 30,
+                        discard=False, comment=None, comment_url=None, rest={}
+                    )
+                    jar.set_cookie(c)
+        ydl_opts = {
+            "outtmpl": video_path, "quiet": True, "no_warnings": True,
+            "merge_output_format": "mp4", "cookiejar": jar,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ret = ydl.download([video_url])
+        if ret != 0 or not os.path.exists(video_path):
+            tasks[task_id] = {"status": "failed", "error": "下载失败，请检查视频链接或Cookie"}
             return
         tasks[task_id]["step"] = "提取音频"
         audio_path = f"{out_path}/audio.wav"
@@ -1149,6 +1171,16 @@ def get_voices():
         {"id": "yunyang",  "name": "云扬", "desc": "播音男声"},
     ]})
 
+
+@app.post("/upload-bgm")
+async def upload_bgm(file: UploadFile = File(...)):
+    bgm_dir = "/root/autodl-tmp/assets/bgm"
+    os.makedirs(bgm_dir, exist_ok=True)
+    safe_name = re.sub(r'[^\w\u4e00-\u9fff.\-]', '_', file.filename or "bgm.mp3")
+    dest = f"{bgm_dir}/{safe_name}"
+    with open(dest, "wb") as f:
+        f.write(await file.read())
+    return JSONResponse({"filename": safe_name})
 
 @app.get("/bgm/{filename}")
 def get_bgm(filename: str):
