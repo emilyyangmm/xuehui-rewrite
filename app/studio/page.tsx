@@ -163,11 +163,37 @@ export default function StudioPage() {
   const toggleEl = (id: string) =>
     setSelectedElements(p => p.includes(id) ? p.filter(x => x !== id) : p.length < 3 ? [...p, id] : p);
 
+  const isSingleVideo = (url: string) =>
+    /\/video\/\d+/.test(url) || /v\.douyin\.com/.test(url) || /douyin\.com\/.*\?/.test(url);
+
   const fetchScript = async () => {
     if (!douyinUrl.trim()) return;
     setFetchingScript(true); setErr(""); setVideos([]); setAuthorInfo(null);
     try {
       const cookie = localStorage.getItem("douyin_cookie") || "";
+
+      if (isSingleVideo(douyinUrl)) {
+        // 单个视频：直接提取文案
+        setErr("正在提取视频文案，约1-2分钟…");
+        const res = await fetch("/api/asr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ video_url: douyinUrl, cookie }),
+        });
+        const d = await res.json();
+        if (d.task_id) {
+          pollTask(
+            d.task_id,
+            (sd) => { setOriginalScript(sd.transcript || ""); setErr(""); setFetchingScript(false); },
+            () => { setErr("文案提取失败，请检查Cookie"); setFetchingScript(false); }
+          );
+        } else {
+          throw new Error(d.error || "提取失败");
+        }
+        return;
+      }
+
+      // 博主主页：拉取视频列表
       const res = await fetch(`${API}/user-videos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -175,7 +201,7 @@ export default function StudioPage() {
           url: douyinUrl,
           sort_by: sortBy === "like" ? "likes" : "play",
           count: 20,
-          cookie: cookie,  // Cookie 放 body 里
+          cookie: cookie,
         }),
       });
       const d = await res.json();
@@ -189,7 +215,7 @@ export default function StudioPage() {
         play_count: v.plays || 0,
         like_count: v.likes || 0,
         comment_count: v.comments || 0,
-        video_url: v.video_url,  // 确保视频URL被保留
+        video_url: v.video_url,
       })));
     } catch (e: any) { setErr(e.message); }
     finally { setFetchingScript(false); }
