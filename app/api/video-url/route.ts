@@ -20,7 +20,11 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: any;
+    try { data = JSON.parse(text); } catch {
+      return NextResponse.json({ error: `抖音接口返回非JSON：${text.slice(0, 150)}` }, { status: 500 });
+    }
     const detail = data?.aweme_detail;
     if (!detail) return NextResponse.json({ error: "视频不存在或无权限" }, { status: 404 });
 

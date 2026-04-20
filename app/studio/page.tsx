@@ -199,7 +199,9 @@ export default function StudioPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ aweme_id: awemeId, cookie }),
         });
-        const urlData = await urlRes.json();
+        const urlText = await urlRes.text();
+        let urlData: any;
+        try { urlData = JSON.parse(urlText); } catch { setErr("获取直链失败：" + urlText.slice(0, 100)); setFetchingScript(false); return; }
         if (urlData.error || !urlData.play_url) {
           setErr(urlData.error || "获取视频直链失败");
           setFetchingScript(false);
