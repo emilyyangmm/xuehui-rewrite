@@ -790,9 +790,17 @@ def run_fetch_video(task_id, url, out_path, cookie):
         tasks[task_id] = {"status": "failed", "error": str(e)}
 
 
+def normalize_douyin_url(url: str) -> str:
+    """把各种抖音链接统一转成 /video/{id} 格式"""
+    m = re.search(r'modal_id=(\d+)', url)
+    if m:
+        return f"https://www.douyin.com/video/{m.group(1)}"
+    return url
+
 def run_download_transcribe(task_id, video_url, cookie, out_path):
     """用 yt-dlp 下载抖音视频并转录"""
     tasks[task_id] = {"status": "running", "step": "下载视频"}
+    video_url = normalize_douyin_url(video_url)
     try:
         video_path = f"{out_path}/source.mp4"
         # 把 cookie 字符串写成 Netscape 格式临时文件
