@@ -475,8 +475,16 @@ export default function StudioPage() {
               </div>
             )}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>抖音 Cookie</div>
-              <textarea value={tempCookie} onChange={e => setTempCookie(e.target.value)} rows={3} style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11, resize: "vertical" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ fontSize: 12, color: "#94a3b8" }}>抖音 Cookie</div>
+                <a href="https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank" rel="noreferrer"
+                  style={{ fontSize: 11, color: "#818cf8", textDecoration: "none" }}>
+                  如何获取？→
+                </a>
+              </div>
+              <textarea value={tempCookie} onChange={e => setTempCookie(e.target.value)} rows={3}
+                placeholder={"方法1：装 Cookie-Editor 插件 → 打开抖音 → 点插件 → Export as Header String\n方法2：抖音页面按 F12 → Console → 输入 copy(document.cookie) → 回车"}
+                style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11, resize: "vertical" }} />
             </div>
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>Qwen API Key</div>
