@@ -190,28 +190,12 @@ export default function StudioPage() {
       const cookie = localStorage.getItem("douyin_cookie") || "";
 
       if (isSingleVideo(douyinUrl)) {
-        // 单个视频：先从 Vercel 拿直链（绕过云服务器 IP 封锁），再交给后端下载+转录
-        setErr("正在获取视频直链…");
-        const awemeId = douyinUrl.match(/\/video\/(\d+)/)?.[1] || douyinUrl.match(/modal_id=(\d+)/)?.[1] || douyinUrl.match(/\d{15,}/)?.[0] || "";
-        if (!awemeId) { setErr("无法解析视频ID，请确认链接格式"); setFetchingScript(false); return; }
-        const urlRes = await fetch("/api/video-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ aweme_id: awemeId, cookie }),
-        });
-        const urlText = await urlRes.text();
-        let urlData: any;
-        try { urlData = JSON.parse(urlText); } catch { setErr("获取直链失败：" + urlText.slice(0, 100)); setFetchingScript(false); return; }
-        if (urlData.error || !urlData.play_url) {
-          setErr(urlData.error || "获取视频直链失败");
-          setFetchingScript(false);
-          return;
-        }
+        // 单个视频：用 yt-dlp 直接下载（自动处理反爬）
         setErr("正在下载视频并提取文案，约1-2分钟…");
         const dlRes = await fetch(`${API}/download-transcribe`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ play_url: urlData.play_url }),
+          body: JSON.stringify({ video_url: douyinUrl, cookie }),
         });
         const dlData = await dlRes.json();
         if (dlData.task_id) {

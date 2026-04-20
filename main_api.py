@@ -790,19 +790,29 @@ def run_fetch_video(task_id, url, out_path, cookie):
         tasks[task_id] = {"status": "failed", "error": str(e)}
 
 
-def run_download_transcribe(task_id, play_url, out_path):
-    """接受直链，跳过 Playwright，直接下载+转录"""
+def run_download_transcribe(task_id, video_url, cookie, out_path):
+    """用 yt-dlp 下载抖音视频并转录"""
     tasks[task_id] = {"status": "running", "step": "下载视频"}
     try:
-        import urllib.request as ur
         video_path = f"{out_path}/source.mp4"
-        req = ur.Request(play_url, headers={
-            "User-Agent": "Mozilla/5.0",
-            "Referer": "https://www.douyin.com/",
-        })
-        with ur.urlopen(req, timeout=120) as r:
-            with open(video_path, "wb") as f:
-                f.write(r.read())
+        # 把 cookie 字符串写成 Netscape 格式临时文件
+        cookie_file = f"{out_path}/cookies.txt"
+        with open(cookie_file, "w") as f:
+            f.write("# Netscape HTTP Cookie File\n")
+            for item in cookie.split("; "):
+                if "=" in item:
+                    k, v = item.split("=", 1)
+                    f.write(f".douyin.com\tTRUE\t/\tFALSE\t0\t{k.strip()}\t{v.strip()}\n")
+        result = subprocess.run([
+            "yt-dlp", "--cookies", cookie_file,
+            "-o", video_path,
+            "--no-playlist", "-q",
+            "--merge-output-format", "mp4",
+            video_url
+        ], capture_output=True, text=True, timeout=180)
+        if result.returncode != 0 or not os.path.exists(video_path):
+            tasks[task_id] = {"status": "failed", "error": result.stderr[-300:] or "下载失败"}
+            return
         tasks[task_id]["step"] = "提取音频"
         audio_path = f"{out_path}/audio.wav"
         subprocess.run(["ffmpeg", "-y", "-i", video_path, "-ar", "16000", "-ac", "1", audio_path], capture_output=True, timeout=60)
@@ -821,14 +831,15 @@ def run_download_transcribe(task_id, play_url, out_path):
 @app.post("/download-transcribe")
 async def download_transcribe(request: Request):
     body = await request.json()
-    play_url = body.get("play_url", "")
-    if not play_url:
-        return JSONResponse({"error": "缺少play_url"}, status_code=400)
+    video_url = body.get("video_url", "")
+    cookie = body.get("cookie", "")
+    if not video_url:
+        return JSONResponse({"error": "缺少video_url"}, status_code=400)
     task_id = str(uuid.uuid4())[:8]
     out_path = f"{OUTPUT_DIR}/{task_id}"
     os.makedirs(out_path, exist_ok=True)
     tasks[task_id] = {"status": "pending"}
-    threading.Thread(target=run_download_transcribe, args=(task_id, play_url, out_path), daemon=True).start()
+    threading.Thread(target=run_download_transcribe, args=(task_id, video_url, cookie, out_path), daemon=True).start()
     return JSONResponse({"success": True, "task_id": task_id})
 
 @app.post("/fetch-video")
