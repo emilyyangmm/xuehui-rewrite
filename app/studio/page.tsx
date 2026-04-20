@@ -112,7 +112,7 @@ export default function StudioPage() {
   };
 
   const startQrLogin = () => {
-    window.open("https://www.douyin.com/login", "_blank");
+    window.open("https://www.douyin.com", "_blank");
     setQrModal(true);
   };
 
