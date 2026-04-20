@@ -181,7 +181,7 @@ export default function StudioPage() {
     setSelectedElements(p => p.includes(id) ? p.filter(x => x !== id) : p.length < 3 ? [...p, id] : p);
 
   const isSingleVideo = (url: string) =>
-    /\/video\/\d+/.test(url) || /v\.douyin\.com/.test(url) || /douyin\.com\/.*\?/.test(url);
+    /\/video\/\d+/.test(url) || /v\.douyin\.com/.test(url);
 
   const fetchScript = async () => {
     if (!douyinUrl.trim()) return;
