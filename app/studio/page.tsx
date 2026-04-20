@@ -111,29 +111,13 @@ export default function StudioPage() {
     setSettingsOpen(false);
   };
 
-  const startQrLogin = async () => {
-    try {
-      const res = await fetch("/api/douyin-qrcode");
-      const d = await res.json();
-      if (d.error) { alert("获取二维码失败：" + d.error); return; }
-      setQrUrl(d.qrcode_url);
-      setQrToken(d.token);
-      setQrStatus("waiting");
-      setQrModal(true);
-      clearInterval(qrPollRef.current);
-      qrPollRef.current = setInterval(async () => {
-        const r = await fetch(`/api/douyin-qrcode/poll?token=${d.token}`);
-        const s = await r.json();
-        setQrStatus(s.status);
-        if (s.status === "done") {
-          clearInterval(qrPollRef.current);
-          setTempCookie(s.cookie);
-          setQrModal(false);
-        } else if (s.status === "expired" || s.status === "error") {
-          clearInterval(qrPollRef.current);
-        }
-      }, 2000);
-    } catch (e) { alert("网络错误"); }
+  const startQrLogin = () => {
+    window.open("https://www.douyin.com/login", "_blank");
+    setQrModal(true);
+  };
+
+  const copyConsoleCmd = () => {
+    navigator.clipboard.writeText("copy(document.cookie)");
   };
 
 
@@ -489,28 +473,39 @@ export default function StudioPage() {
 
   return (
     <>
-      {/* 扫码登录弹窗 */}
+      {/* 登录引导弹窗 */}
       {qrModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "#0f172a", borderRadius: 16, padding: 32, width: 280, textAlign: "center", border: "1px solid #1e293b" }}>
-            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>用抖音 App 扫码登录</div>
-            {qrUrl && <img src={qrUrl} style={{ width: 200, height: 200, borderRadius: 8, background: "white", padding: 8 }} />}
-            <div style={{ marginTop: 12, fontSize: 13, color: qrStatus === "scanned" ? "#22d3ee" : qrStatus === "expired" ? "#f87171" : "#64748b" }}>
-              {qrStatus === "waiting" && "等待扫码…"}
-              {qrStatus === "scanned" && "已扫码，请在手机上确认"}
-              {qrStatus === "done" && "✓ 登录成功"}
-              {qrStatus === "expired" && "二维码已过期"}
-              {qrStatus === "error" && "登录失败，请重试"}
+          <div style={{ background: "#0f172a", borderRadius: 16, padding: 28, width: 360, border: "1px solid #1e293b" }}>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 20 }}>🔑 获取抖音 Cookie</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>1</div>
+                <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6 }}>已为你打开抖音登录页，请在新标签页里<b>完成登录</b></div>
+              </div>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>2</div>
+                <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6 }}>登录后，在<b>抖音页面</b>按 <code style={{ background: "#1e293b", padding: "1px 5px", borderRadius: 4 }}>F12</code> → 点 <b>Console</b></div>
+              </div>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>3</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: "#cbd5e1", marginBottom: 8 }}>粘贴下面这行命令，按回车，Cookie 自动复制到剪贴板</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <code style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "7px 10px", fontSize: 12, color: "#22d3ee" }}>copy(document.cookie)</code>
+                    <button onClick={copyConsoleCmd} style={{ background: "#6366f1", border: "none", borderRadius: 6, padding: "0 12px", color: "white", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>复制命令</button>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>4</div>
+                <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6 }}>回到设置页面，在 Cookie 框里 <b>Ctrl+V</b> 粘贴，保存即可</div>
+              </div>
             </div>
-            <button onClick={() => { clearInterval(qrPollRef.current); setQrModal(false); }}
-              style={{ marginTop: 16, background: "none", border: "1px solid #334155", borderRadius: 8, padding: "8px 20px", color: "#64748b", cursor: "pointer", fontSize: 13 }}>
-              取消
-            </button>
-            {(qrStatus === "expired" || qrStatus === "error") && (
-              <button onClick={startQrLogin} style={{ marginTop: 16, marginLeft: 8, background: "#6366f1", border: "none", borderRadius: 8, padding: "8px 20px", color: "white", cursor: "pointer", fontSize: 13 }}>
-                刷新
-              </button>
-            )}
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              <button onClick={() => setQrModal(false)} style={{ flex: 1, background: "none", border: "1px solid #334155", borderRadius: 8, padding: "9px", color: "#64748b", cursor: "pointer", fontSize: 13 }}>关闭</button>
+              <button onClick={() => { setQrModal(false); }} style={{ flex: 1, background: "#6366f1", border: "none", borderRadius: 8, padding: "9px", color: "white", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>我已复制好，去粘贴 →</button>
+            </div>
           </div>
         </div>
       )}
@@ -533,7 +528,7 @@ export default function StudioPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div style={{ fontSize: 12, color: "#94a3b8" }}>抖音 Cookie</div>
                 <button onClick={startQrLogin} style={{ background: "linear-gradient(135deg,#818cf8,#22d3ee)", border: "none", borderRadius: 6, padding: "4px 12px", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                  📱 扫码自动登录
+                  🔑 一键获取教程
                 </button>
               </div>
               {tempCookie && <div style={{ fontSize: 11, color: "#22d3ee", marginBottom: 6 }}>✓ 已获取 Cookie</div>}
