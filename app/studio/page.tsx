@@ -113,7 +113,7 @@ export default function StudioPage() {
 
   const startQrLogin = async () => {
     try {
-      const res = await fetch(`${API}/douyin-qrcode`);
+      const res = await fetch("/api/douyin-qrcode");
       const d = await res.json();
       if (d.error) { alert("获取二维码失败：" + d.error); return; }
       setQrUrl(d.qrcode_url);
@@ -122,7 +122,7 @@ export default function StudioPage() {
       setQrModal(true);
       clearInterval(qrPollRef.current);
       qrPollRef.current = setInterval(async () => {
-        const r = await fetch(`${API}/douyin-qrcode/poll/${d.token}`);
+        const r = await fetch(`/api/douyin-qrcode/poll?token=${d.token}`);
         const s = await r.json();
         setQrStatus(s.status);
         if (s.status === "done") {
@@ -133,7 +133,7 @@ export default function StudioPage() {
           clearInterval(qrPollRef.current);
         }
       }, 2000);
-    } catch (e) { alert("网络错误，请检查后端服务"); }
+    } catch (e) { alert("网络错误"); }
   };
 
 
