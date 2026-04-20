@@ -102,7 +102,7 @@ def get_qwen_key(request: Request = None) -> str:
         key = request.headers.get("X-Qwen-Key", "")
         if key:
             return key
-    return os.environ.get("QWEN_API_KEY", "sk-eb43ef8bc7094e8e8d4f4b762adfd9f9")
+    return os.environ.get("QWEN_API_KEY", "")
 
 def get_douyin_cookie(request: Request = None) -> str:
     if request:
