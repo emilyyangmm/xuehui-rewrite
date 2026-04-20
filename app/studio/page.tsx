@@ -387,6 +387,8 @@ export default function StudioPage() {
   };
 
   const genVideo = async () => {
+    console.log("audioUrl:", audioUrl);
+    console.log("drivingVideo:", drivingVideo);
     if (!drivingVideo) { setErr("请上传你的视频"); return; }
     if (!audioUrl) { setErr("请先生成口播音频"); return; }
     setGeneratingVideo(true); setRawVideoUrl(""); setErr("");
