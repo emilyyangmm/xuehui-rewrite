@@ -790,6 +790,47 @@ def run_fetch_video(task_id, url, out_path, cookie):
         tasks[task_id] = {"status": "failed", "error": str(e)}
 
 
+def run_download_transcribe(task_id, play_url, out_path):
+    """接受直链，跳过 Playwright，直接下载+转录"""
+    tasks[task_id] = {"status": "running", "step": "下载视频"}
+    try:
+        import urllib.request as ur
+        video_path = f"{out_path}/source.mp4"
+        req = ur.Request(play_url, headers={
+            "User-Agent": "Mozilla/5.0",
+            "Referer": "https://www.douyin.com/",
+        })
+        with ur.urlopen(req, timeout=120) as r:
+            with open(video_path, "wb") as f:
+                f.write(r.read())
+        tasks[task_id]["step"] = "提取音频"
+        audio_path = f"{out_path}/audio.wav"
+        subprocess.run(["ffmpeg", "-y", "-i", video_path, "-ar", "16000", "-ac", "1", audio_path], capture_output=True, timeout=60)
+        tasks[task_id]["step"] = "语音转文字"
+        transcript = ""
+        if os.path.exists(audio_path):
+            try:
+                r = get_whisper_model().transcribe(audio_path, language="zh")
+                transcript = r["text"]
+            except Exception:
+                transcript = ""
+        tasks[task_id] = {"status": "done", "video_url": f"{BACKEND_URL}/file/{task_id}/source.mp4", "transcript": transcript}
+    except Exception as e:
+        tasks[task_id] = {"status": "failed", "error": str(e)}
+
+@app.post("/download-transcribe")
+async def download_transcribe(request: Request):
+    body = await request.json()
+    play_url = body.get("play_url", "")
+    if not play_url:
+        return JSONResponse({"error": "缺少play_url"}, status_code=400)
+    task_id = str(uuid.uuid4())[:8]
+    out_path = f"{OUTPUT_DIR}/{task_id}"
+    os.makedirs(out_path, exist_ok=True)
+    tasks[task_id] = {"status": "pending"}
+    threading.Thread(target=run_download_transcribe, args=(task_id, play_url, out_path), daemon=True).start()
+    return JSONResponse({"success": True, "task_id": task_id})
+
 @app.post("/fetch-video")
 async def fetch_video(request: Request, url: str = Form(None)):
     cookie = get_douyin_cookie(request)

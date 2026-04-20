@@ -190,23 +190,37 @@ export default function StudioPage() {
       const cookie = localStorage.getItem("douyin_cookie") || "";
 
       if (isSingleVideo(douyinUrl)) {
-        // 单个视频：直接提取文案
-        setErr("正在提取视频文案，约1-2分钟…");
-        const res = await fetch("/api/asr", {
+        // 单个视频：先从 Vercel 拿直链（绕过云服务器 IP 封锁），再交给后端下载+转录
+        setErr("正在获取视频直链…");
+        const awemeId = douyinUrl.match(/\/video\/(\d+)/)?.[1] || douyinUrl.match(/\d{15,}/)?.[0] || "";
+        if (!awemeId) { setErr("无法解析视频ID，请确认链接格式"); setFetchingScript(false); return; }
+        const urlRes = await fetch("/api/video-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ video_url: douyinUrl, cookie }),
+          body: JSON.stringify({ aweme_id: awemeId, cookie }),
         });
-        const d = await res.json();
-        if (d.task_id) {
+        const urlData = await urlRes.json();
+        if (urlData.error || !urlData.play_url) {
+          setErr(urlData.error || "获取视频直链失败");
+          setFetchingScript(false);
+          return;
+        }
+        setErr("正在下载视频并提取文案，约1-2分钟…");
+        const dlRes = await fetch(`${API}/download-transcribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ play_url: urlData.play_url }),
+        });
+        const dlData = await dlRes.json();
+        if (dlData.task_id) {
           pollTask(
-            d.task_id,
+            dlData.task_id,
             (sd) => { setOriginalScript(sd.transcript || ""); setErr(""); setFetchingScript(false); },
-            () => { setErr("文案提取失败，请检查Cookie"); setFetchingScript(false); },
+            (e) => { setErr(e || "文案提取失败"); setFetchingScript(false); },
             (step) => setErr(`正在处理：${step}…`)
           );
         } else {
-          throw new Error(d.error || "提取失败");
+          throw new Error(dlData.error || "提取失败");
         }
         return;
       }
