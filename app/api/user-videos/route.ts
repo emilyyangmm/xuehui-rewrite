@@ -35,6 +35,13 @@ export async function POST(req: NextRequest) {
     });
 
     const data = await res.json();
+    // 抖音返回错误时透传错误信息
+    if (data.status_code && data.status_code !== 0) {
+      return NextResponse.json({ error: `抖音API错误 ${data.status_code}：${JSON.stringify(data).slice(0, 200)}` }, { status: 400 });
+    }
+    if (!data.aweme_list) {
+      return NextResponse.json({ error: `抖音返回异常：${JSON.stringify(data).slice(0, 300)}` }, { status: 400 });
+    }
     const videos = (data.aweme_list || []).map((v: any) => {
       const coverList = v?.video?.cover?.url_list ?? [];
       const stats = v?.statistics ?? {};
