@@ -803,21 +803,11 @@ def run_download_transcribe(task_id, video_url, cookie, out_path):
     video_url = normalize_douyin_url(video_url)
     try:
         video_path = f"{out_path}/source.mp4"
-        # 把 cookie 字符串写成 Netscape 格式临时文件
-        cookie_file = f"{out_path}/cookies.txt"
-        with open(cookie_file, "w") as f:
-            f.write("# Netscape HTTP Cookie File\n")
-            for item in cookie.split("; "):
-                if "=" in item:
-                    k, v = item.split("=", 1)
-                    f.write(f".douyin.com\tTRUE\t/\tFALSE\t0\t{k.strip()}\t{v.strip()}\n")
-        result = subprocess.run([
-            "yt-dlp", "--cookies", cookie_file,
-            "-o", video_path,
-            "--no-playlist", "-q",
-            "--merge-output-format", "mp4",
-            video_url
-        ], capture_output=True, text=True, timeout=180)
+        cmd = ["yt-dlp", "-o", video_path, "--no-playlist", "-q", "--merge-output-format", "mp4"]
+        if cookie:
+            cmd += ["--add-header", f"Cookie:{cookie}"]
+        cmd.append(video_url)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
         if result.returncode != 0 or not os.path.exists(video_path):
             tasks[task_id] = {"status": "failed", "error": result.stderr[-300:] or "下载失败"}
             return
