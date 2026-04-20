@@ -132,6 +132,8 @@ export default function StudioPage() {
   const [selectedElements, setSelectedElements] = useState<string[]>([]);
   const [industry, setIndustry] = useState("职场");
   const [scriptType, setScriptType] = useState("聊观点");
+  const [voiceProfiles, setVoiceProfiles] = useState<any[]>([]);
+  const [voiceName, setVoiceName] = useState("");
   const [titles, setTitles] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
 
@@ -455,6 +457,13 @@ export default function StudioPage() {
   };
 
   useEffect(() => {
+    // 获取声音档案列表
+    fetch(`${API}/voice/list`).then(r => r.json()).then(d => {
+      if (d.success) setVoiceProfiles(d.profiles || []);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     fetch(`${API}/history?invite_code=${localStorage.getItem("invite_code") || ""}`)
       .then(r => r.json())
       .then(d => { if(d.success) setHistory(d.history) })
@@ -700,6 +709,25 @@ export default function StudioPage() {
               ) : (
                 <>
                   {/* 克隆声音模式 */}
+                  {voiceProfiles.length > 0 && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>我的声音</div>
+                      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                        {voiceProfiles.map(p => (
+                          <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 6, background: "#1e293b", border: "1px solid #334155" }}>
+                            <span style={{ fontSize: 12, color: "#e2e8f0" }}>{p.name}</span>
+                            <button onClick={async () => {
+                              try {
+                                await fetch(`${API}/voice/${p.name}`, { method: "DELETE" });
+                                setVoiceProfiles(voiceProfiles.filter(x => x.name !== p.name));
+                              } catch {}
+                            }} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 10 }}>✕</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>上传声音样本</div>
                     <div onClick={() => voiceRef.current?.click()} style={{ border: "1px dashed #334155", borderRadius: 7, padding: "12px", textAlign: "center", cursor: "pointer", background: "#0a0f1e" }}>
@@ -718,9 +746,34 @@ export default function StudioPage() {
                   {voiceSample && (
                     <>
                       <button onClick={transcribeVoice} disabled={transcribing}
-                        style={{ width: "100%", padding: "8px", marginBottom: 10, borderRadius: 7, border: "none", background: "#1e293b", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>
+                        style={{ width: "100%", padding: "8px", marginBottom: 8, borderRadius: 7, border: "none", background: "#1e293b", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>
                         {transcribing ? "识别中…" : "🔍 识别文字"}
                       </button>
+                      
+                      {voiceTranscript && !voiceName && (
+                        <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
+                          <input value={voiceName} onChange={e => setVoiceName(e.target.value)} placeholder="输入名字保存此声音"
+                            style={{ flex: 1, padding: "7px 10px", background: "#1e293b", border: "1px solid #334155", borderRadius: 6, color: "white", fontSize: 11 }} />
+                          <button onClick={async () => {
+                            if (!voiceName.trim()) return;
+                            const fd = new FormData();
+                            fd.append("name", voiceName.trim());
+                            fd.append("prompt_text", voiceTranscript);
+                            fd.append("voice_sample", voiceSample!);
+                            try {
+                              const r = await fetch(`${API}/voice/save`, { method: "POST", body: fd });
+                              const d = await r.json();
+                              if (d.success) {
+                                setVoiceProfiles([...voiceProfiles, { name: voiceName.trim(), prompt_text: voiceTranscript }]);
+                                setVoiceName("");
+                                setErr("声音已保存！");
+                              }
+                            } catch {}
+                          }} style={{ padding: "7px 12px", background: "#6366f1", border: "none", borderRadius: 6, color: "white", fontSize: 11, cursor: "pointer" }}>
+                            💾 保存
+                          </button>
+                        </div>
+                      )}
                       
                       {voiceTranscript && (
                         <div style={{ marginBottom: 10 }}>
