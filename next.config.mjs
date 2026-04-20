@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ['*.dev.coze.site', '130.211.240.194'],
+  allowedDevOrigins: ['*.dev.coze.site', '*.autodl.com', '*.seetacloud.com'],
   images: {
     remotePatterns: [
       {
