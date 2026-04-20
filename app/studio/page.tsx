@@ -111,6 +111,31 @@ export default function StudioPage() {
     setSettingsOpen(false);
   };
 
+  const startQrLogin = async () => {
+    try {
+      const res = await fetch(`${API}/douyin-qrcode`);
+      const d = await res.json();
+      if (d.error) { alert("获取二维码失败：" + d.error); return; }
+      setQrUrl(d.qrcode_url);
+      setQrToken(d.token);
+      setQrStatus("waiting");
+      setQrModal(true);
+      clearInterval(qrPollRef.current);
+      qrPollRef.current = setInterval(async () => {
+        const r = await fetch(`${API}/douyin-qrcode/poll/${d.token}`);
+        const s = await r.json();
+        setQrStatus(s.status);
+        if (s.status === "done") {
+          clearInterval(qrPollRef.current);
+          setTempCookie(s.cookie);
+          setQrModal(false);
+        } else if (s.status === "expired" || s.status === "error") {
+          clearInterval(qrPollRef.current);
+        }
+      }, 2000);
+    } catch (e) { alert("网络错误，请检查后端服务"); }
+  };
+
 
   const [douyinUrl, setDouyinUrl] = useState("");
   const [fetchingScript, setFetchingScript] = useState(false);
@@ -146,6 +171,11 @@ export default function StudioPage() {
   const [tempCookie, setTempCookie] = useState("");
   const [tempQwenKey, setTempQwenKey] = useState("");
   const [tempActivation, setTempActivation] = useState("");
+  const [qrModal, setQrModal] = useState(false);
+  const [qrUrl, setQrUrl] = useState("");
+  const [qrToken, setQrToken] = useState("");
+  const [qrStatus, setQrStatus] = useState<"waiting"|"scanned"|"done"|"expired"|"error">("waiting");
+  const qrPollRef = useRef<any>(null);
   const [fontFile, setFontFile] = useState("AlimamaShuHeiTi-Bold.ttf");
   
   // 声音克隆相关
@@ -459,6 +489,31 @@ export default function StudioPage() {
 
   return (
     <>
+      {/* 扫码登录弹窗 */}
+      {qrModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#0f172a", borderRadius: 16, padding: 32, width: 280, textAlign: "center", border: "1px solid #1e293b" }}>
+            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>用抖音 App 扫码登录</div>
+            {qrUrl && <img src={qrUrl} style={{ width: 200, height: 200, borderRadius: 8, background: "white", padding: 8 }} />}
+            <div style={{ marginTop: 12, fontSize: 13, color: qrStatus === "scanned" ? "#22d3ee" : qrStatus === "expired" ? "#f87171" : "#64748b" }}>
+              {qrStatus === "waiting" && "等待扫码…"}
+              {qrStatus === "scanned" && "已扫码，请在手机上确认"}
+              {qrStatus === "done" && "✓ 登录成功"}
+              {qrStatus === "expired" && "二维码已过期"}
+              {qrStatus === "error" && "登录失败，请重试"}
+            </div>
+            <button onClick={() => { clearInterval(qrPollRef.current); setQrModal(false); }}
+              style={{ marginTop: 16, background: "none", border: "1px solid #334155", borderRadius: 8, padding: "8px 20px", color: "#64748b", cursor: "pointer", fontSize: 13 }}>
+              取消
+            </button>
+            {(qrStatus === "expired" || qrStatus === "error") && (
+              <button onClick={startQrLogin} style={{ marginTop: 16, marginLeft: 8, background: "#6366f1", border: "none", borderRadius: 8, padding: "8px 20px", color: "white", cursor: "pointer", fontSize: 13 }}>
+                刷新
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {/* 设置面板 */}
       {settingsOpen && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -475,15 +530,15 @@ export default function StudioPage() {
               </div>
             )}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div style={{ fontSize: 12, color: "#94a3b8" }}>抖音 Cookie</div>
-                <a href="https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank" rel="noreferrer"
-                  style={{ fontSize: 11, color: "#818cf8", textDecoration: "none" }}>
-                  如何获取？→
-                </a>
+                <button onClick={startQrLogin} style={{ background: "linear-gradient(135deg,#818cf8,#22d3ee)", border: "none", borderRadius: 6, padding: "4px 12px", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  📱 扫码自动登录
+                </button>
               </div>
-              <textarea value={tempCookie} onChange={e => setTempCookie(e.target.value)} rows={3}
-                placeholder={"方法1：装 Cookie-Editor 插件 → 打开抖音 → 点插件 → Export as Header String\n方法2：抖音页面按 F12 → Console → 输入 copy(document.cookie) → 回车"}
+              {tempCookie && <div style={{ fontSize: 11, color: "#22d3ee", marginBottom: 6 }}>✓ 已获取 Cookie</div>}
+              <textarea value={tempCookie} onChange={e => setTempCookie(e.target.value)} rows={2}
+                placeholder="点击「扫码自动登录」，用抖音 App 扫码即可自动填入"
                 style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11, resize: "vertical" }} />
             </div>
             <div style={{ marginBottom: 16 }}>

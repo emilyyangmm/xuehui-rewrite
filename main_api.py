@@ -1195,6 +1195,70 @@ async def list_invites(secret: str = ""):
 def health():
     return {"status": "ok", "services": ["liveportrait","tts","merge","rewrite","fetch-video","generate-title","user-videos","machine-code","verify-license"]}
 
+# ===================================================
+# 抖音扫码登录
+# ===================================================
+_qr_sessions = {}  # token -> {cookie, status}
+
+@app.get("/douyin-qrcode")
+async def get_douyin_qrcode():
+    try:
+        import urllib.request as ur
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.douyin.com/",
+        }
+        url = "https://sso.douyin.com/get_qrcode/?service=https%3A%2F%2Fwww.douyin.com&need_logo=false&need_short_url=true&device_platform=web_app&aid=6383&account_sdk_source=sso&sdk_version=2.2.5-rc.6&language=zh"
+        req = ur.Request(url, headers=headers)
+        with ur.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        token = data["data"]["token"]
+        qrcode_url = data["data"]["qrcode_index_url"]
+        _qr_sessions[token] = {"status": "waiting", "cookie": ""}
+        return JSONResponse({"token": token, "qrcode_url": qrcode_url})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/douyin-qrcode/poll/{token}")
+async def poll_douyin_qrcode(token: str):
+    try:
+        import urllib.request as ur
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.douyin.com/",
+        }
+        url = f"https://sso.douyin.com/check_qrconnect/?token={token}&service=https%3A%2F%2Fwww.douyin.com&need_logo=false&device_platform=web_app&aid=6383&account_sdk_source=sso&sdk_version=2.2.5-rc.6"
+        req = ur.Request(url, headers=headers)
+        with ur.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        status = data.get("data", {}).get("status", 0)
+        # status: 1=待扫码, 2=已扫码, 3=已确认, 4=已过期
+        if status == 3:
+            redirect_url = data["data"].get("redirect_url", "")
+            if redirect_url:
+                # 用 Playwright 跟随跳转，捕获最终 cookie
+                def capture():
+                    from playwright.sync_api import sync_playwright
+                    with sync_playwright() as p:
+                        browser = p.chromium.launch(headless=True)
+                        ctx = browser.new_context(ignore_https_errors=True)
+                        page = ctx.new_page()
+                        page.goto(redirect_url, wait_until="networkidle", timeout=30000)
+                        cookies = ctx.cookies("https://www.douyin.com")
+                        browser.close()
+                        return "; ".join(f"{c['name']}={c['value']}" for c in cookies if c.get("value"))
+                cookie_str = capture()
+                _qr_sessions[token] = {"status": "done", "cookie": cookie_str}
+                return JSONResponse({"status": "done", "cookie": cookie_str})
+        elif status == 4:
+            return JSONResponse({"status": "expired"})
+        elif status == 2:
+            return JSONResponse({"status": "scanned"})
+        else:
+            return JSONResponse({"status": "waiting"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "error": str(e)})
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=6006)
