@@ -211,8 +211,8 @@ export default function StudioPage() {
         return;
       }
 
-      // 博主主页：拉取视频列表
-      const res = await fetch(`${API}/user-videos`, {
+      // 博主主页：拉取视频列表（走 Vercel，绕过云服务器 IP 封锁）
+      const res = await fetch("/api/user-videos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
