@@ -485,21 +485,18 @@ export default function StudioPage() {
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                 <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>2</div>
-                <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6 }}>登录后，在<b>抖音页面</b>按 <code style={{ background: "#1e293b", padding: "1px 5px", borderRadius: 4 }}>F12</code> → 点 <b>Console</b></div>
+                <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6 }}>登录后，按 <code style={{ background: "#1e293b", padding: "1px 5px", borderRadius: 4 }}>F12</code> → 点顶部 <b>Network（网络）</b> 标签</div>
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                 <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>3</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, color: "#cbd5e1", marginBottom: 8 }}>粘贴下面这行命令，按回车，Cookie 自动复制到剪贴板</div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <code style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "7px 10px", fontSize: 12, color: "#22d3ee" }}>copy(document.cookie)</code>
-                    <button onClick={copyConsoleCmd} style={{ background: "#6366f1", border: "none", borderRadius: 6, padding: "0 12px", color: "white", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>复制命令</button>
-                  </div>
-                </div>
+                <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6 }}>刷新页面 → 点击列表里任意一条 <b>douyin.com</b> 请求 → 右侧找 <b>Request Headers</b> → 找到 <b>cookie:</b> 这一行 → 右键 → <b>Copy value</b></div>
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                 <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>4</div>
                 <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6 }}>回到设置页面，在 Cookie 框里 <b>Ctrl+V</b> 粘贴，保存即可</div>
+              </div>
+              <div style={{ background: "rgba(248,113,113,.1)", border: "1px solid rgba(248,113,113,.2)", borderRadius: 6, padding: "8px 10px", fontSize: 11, color: "#fca5a5" }}>
+                ⚠ 不要用控制台的 copy(document.cookie)，那种方法获取不到完整 Cookie
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
