@@ -181,7 +181,7 @@ export default function StudioPage() {
     setSelectedElements(p => p.includes(id) ? p.filter(x => x !== id) : p.length < 3 ? [...p, id] : p);
 
   const isSingleVideo = (url: string) =>
-    /\/video\/\d+/.test(url) || /v\.douyin\.com/.test(url);
+    /\/video\/\d+/.test(url) || /v\.douyin\.com/.test(url) || /modal_id=\d+/.test(url);
 
   const fetchScript = async () => {
     if (!douyinUrl.trim()) return;
@@ -192,7 +192,7 @@ export default function StudioPage() {
       if (isSingleVideo(douyinUrl)) {
         // 单个视频：先从 Vercel 拿直链（绕过云服务器 IP 封锁），再交给后端下载+转录
         setErr("正在获取视频直链…");
-        const awemeId = douyinUrl.match(/\/video\/(\d+)/)?.[1] || douyinUrl.match(/\d{15,}/)?.[0] || "";
+        const awemeId = douyinUrl.match(/\/video\/(\d+)/)?.[1] || douyinUrl.match(/modal_id=(\d+)/)?.[1] || douyinUrl.match(/\d{15,}/)?.[0] || "";
         if (!awemeId) { setErr("无法解析视频ID，请确认链接格式"); setFetchingScript(false); return; }
         const urlRes = await fetch("/api/video-url", {
           method: "POST",
