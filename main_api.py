@@ -1,4 +1,4 @@
-import subprocess, uuid, os, threading, asyncio, json, re, hashlib, socket
+import subprocess, uuid, os, threading, asyncio, json, re, hashlib, socket, time, shutil
 import edge_tts
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -19,6 +19,38 @@ BACKEND_URL = "https://u946450-a783-20029e21.westc.seetacloud.com:8443"
 LICENSE_FILE = "/root/licenses.json"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 tasks = {}
+
+# 预加载 Whisper 模型
+_whisper_model = None
+def get_whisper_model():
+    global _whisper_model
+    if _whisper_model is None:
+        import whisper
+        _whisper_model = whisper.load_model("base")
+    return _whisper_model
+
+def _preload_whisper():
+    try:
+        get_whisper_model()
+    except Exception:
+        pass
+
+threading.Thread(target=_preload_whisper, daemon=True).start()
+
+# 定时清理超过24小时的输出文件
+def _cleanup_loop():
+    while True:
+        time.sleep(3600)
+        try:
+            now = time.time()
+            for name in os.listdir(OUTPUT_DIR):
+                path = os.path.join(OUTPUT_DIR, name)
+                if os.path.isdir(path) and now - os.path.getmtime(path) > 86400:
+                    shutil.rmtree(path, ignore_errors=True)
+        except Exception:
+            pass
+
+threading.Thread(target=_cleanup_loop, daemon=True).start()
 
 VOICES = {
     "xiaoxiao": "zh-CN-XiaoxiaoNeural",
@@ -749,9 +781,7 @@ def run_fetch_video(task_id, url, out_path, cookie):
         transcript = ""
         if os.path.exists(audio_path):
             try:
-                import whisper
-                m = whisper.load_model("base")
-                r = m.transcribe(audio_path, language="zh")
+                r = get_whisper_model().transcribe(audio_path, language="zh")
                 transcript = r["text"]
             except Exception:
                 transcript = ""
@@ -945,9 +975,7 @@ async def transcribe(audio: UploadFile = File(...)):
     with open(raw_path, "wb") as f: f.write(await audio.read())
     subprocess.run(["ffmpeg", "-y", "-i", raw_path, "-ar", "16000", "-ac", "1", wav_path], capture_output=True)
     try:
-        import whisper
-        m = whisper.load_model("base")
-        r = m.transcribe(wav_path, language="zh")
+        r = get_whisper_model().transcribe(wav_path, language="zh")
         return JSONResponse({"success": True, "text": r["text"]})
     except Exception as e:
         return JSONResponse({"success": False, "error": str(e)})
@@ -965,9 +993,7 @@ def run_merge(task_id, video_path, audio_path, subtitle_text, bgm_file, font_fil
         srt_path = f"{out_path}/subtitle.srt"
         # 用Whisper生成精准时间戳字幕
         try:
-            import whisper
-            model = whisper.load_model("base")
-            result = model.transcribe(audio_path, language="zh", word_timestamps=True)
+            result = get_whisper_model().transcribe(audio_path, language="zh", word_timestamps=True)
             with open(srt_path, "w", encoding="utf-8") as f:
                 idx = 1
                 for seg in result["segments"]:
@@ -1135,13 +1161,9 @@ async def verify_invite(request: Request):
     data = load_invites()
     for item in data["codes"]:
         if item["code"] == code:
-            if item["status"] == "used":
-                return JSONResponse({"success": False, "message": "邀请码已使用"})
             if item["status"] == "active":
-                item["status"] = "used"
-                item["used_at"] = datetime.now().isoformat()
-                save_invites(data)
                 return JSONResponse({"success": True, "message": "验证成功"})
+            return JSONResponse({"success": False, "message": "邀请码已禁用"})
     return JSONResponse({"success": False, "message": "邀请码无效"})
 
 @app.post("/invite/generate")

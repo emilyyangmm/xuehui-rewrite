@@ -84,13 +84,14 @@ function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
-function pollTask(taskId: string, onDone: (d: any) => void, onError: (e: string) => void) {
+function pollTask(taskId: string, onDone: (d: any) => void, onError: (e: string) => void, onProgress?: (step: string) => void) {
   const iv = setInterval(async () => {
     try {
       const r = await fetch(`${API}/status/${taskId}`, { headers: getAuthHeaders() });
       const d = await r.json();
       if (d.status === "done") { clearInterval(iv); onDone(d); }
       else if (d.status === "failed") { clearInterval(iv); onError(d.error || "生成失败"); }
+      else if (d.step && onProgress) { onProgress(d.step); }
     } catch (e) { clearInterval(iv); onError("网络错误"); }
   }, 3000);
 }
@@ -134,6 +135,8 @@ export default function StudioPage() {
   const [drivingVideo, setDrivingVideo] = useState<File | null>(null);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [rawVideoUrl, setRawVideoUrl] = useState("");
+  const [videoGenElapsed, setVideoGenElapsed] = useState(0);
+  const videoGenTimer = useRef<any>(null);
 
   const [finalVideo, setFinalVideo] = useState("");
   const [finalVideoUrl, setFinalVideoUrl] = useState("");
@@ -185,7 +188,8 @@ export default function StudioPage() {
           pollTask(
             d.task_id,
             (sd) => { setOriginalScript(sd.transcript || ""); setErr(""); setFetchingScript(false); },
-            () => { setErr("文案提取失败，请检查Cookie"); setFetchingScript(false); }
+            () => { setErr("文案提取失败，请检查Cookie"); setFetchingScript(false); },
+            (step) => setErr(`正在处理：${step}…`)
           );
         } else {
           throw new Error(d.error || "提取失败");
@@ -244,7 +248,8 @@ export default function StudioPage() {
         if (d.task_id) {
           pollTask(d.task_id,
             (sd) => { setOriginalScript(sd.transcript || v.title || ""); setErr(""); },
-            () => { setOriginalScript(v.title || ""); setErr(""); }
+            () => { setOriginalScript(v.title || ""); setErr(""); },
+            (step) => setErr(`正在处理：${step}…`)
           );
         }
       } catch (e) {
@@ -378,14 +383,16 @@ export default function StudioPage() {
       const r = await fetch(`${API}/generate-video`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
+      setVideoGenElapsed(0);
+      videoGenTimer.current = setInterval(() => setVideoGenElapsed(s => s + 1), 1000);
       pollTask(d.task_id,
-        (data) => { 
-          setRawVideoUrl(data.video_url); 
+        (data) => {
+          clearInterval(videoGenTimer.current);
+          setRawVideoUrl(data.video_url);
           setGeneratingVideo(false);
-          // 自动触发合并
-          
         },
-        (e) => { setErr(e); setGeneratingVideo(false); }
+        (e) => { clearInterval(videoGenTimer.current); setErr(e); setGeneratingVideo(false); },
+        (step) => setErr(`数字人生成中：${step}（已耗时 ${videoGenElapsed}s，预计3-5分钟）`)
       );
     } catch (e: any) { setErr(e.message); setGeneratingVideo(false); }
   };
@@ -444,6 +451,10 @@ export default function StudioPage() {
     setTempCookie(localStorage.getItem("douyin_cookie") || "");
     setTempQwenKey(localStorage.getItem("qwen_key") || "");
     setTempActivation(localStorage.getItem("activation_code") || "");
+    // 新用户引导：Cookie 或 API Key 未设置时自动弹出设置
+    const cookie = localStorage.getItem("douyin_cookie");
+    const key = localStorage.getItem("qwen_key");
+    if (!cookie || !key) setSettingsOpen(true);
   }, []);
 
   return (
@@ -452,10 +463,17 @@ export default function StudioPage() {
       {settingsOpen && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "#0f172a", borderRadius: 16, padding: 24, width: 400, border: "1px solid #1e293b" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>⚙️ 账号设置</h2>
               <button onClick={() => setSettingsOpen(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
+            {(!localStorage.getItem("douyin_cookie") || !localStorage.getItem("qwen_key")) && (
+              <div style={{ background: "rgba(99,102,241,.15)", border: "1px solid rgba(99,102,241,.3)", borderRadius: 8, padding: "10px 12px", marginBottom: 16, fontSize: 12, color: "#a5b4fc", lineHeight: 1.6 }}>
+                👋 欢迎使用！请先填写以下信息才能正常使用所有功能。<br/>
+                · 抖音 Cookie：用于拉取视频和文案<br/>
+                · Qwen API Key：用于文案改写和标题生成
+              </div>
+            )}
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>抖音 Cookie</div>
               <textarea value={tempCookie} onChange={e => setTempCookie(e.target.value)} rows={3} style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11, resize: "vertical" }} />
@@ -706,7 +724,7 @@ export default function StudioPage() {
               <div style={{ marginTop: 7 }}>
                 <Btn onClick={genVideo} loading={generatingVideo} color="#22d3ee" full>🎭 生成数字人视频</Btn>
               </div>
-              {generatingVideo && <div style={{ fontSize: 11, color: "#475569", marginTop: 5 }}>⏳ 生成中，约1-2分钟…</div>}
+              {generatingVideo && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>⏳ 生成中，预计3-5分钟（已耗时 {videoGenElapsed}s）</div>}
               {rawVideoUrl && <div style={{ fontSize: 10, color: "#22d3ee", marginTop: 5 }}>✓ 数字人视频生成完成</div>}
             </Section>
 
