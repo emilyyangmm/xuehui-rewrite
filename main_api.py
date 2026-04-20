@@ -1148,7 +1148,8 @@ async def verify_invite(request: Request):
 async def generate_invites(request: Request):
     body = await request.json()
     secret = body.get("secret", "")
-    if secret != os.environ.get("ADMIN_SECRET", "xuehui2026admin"):
+    admin_secret = os.environ.get("ADMIN_SECRET", "")
+    if not admin_secret or secret != admin_secret:
         return JSONResponse({"success": False, "message": "无权限"}, status_code=403)
     count = body.get("count", 10)
     data = load_invites()
@@ -1162,7 +1163,8 @@ async def generate_invites(request: Request):
 
 @app.get("/invite/list")
 async def list_invites(secret: str = ""):
-    if secret != os.environ.get("ADMIN_SECRET", "xuehui2026admin"):
+    admin_secret = os.environ.get("ADMIN_SECRET", "")
+    if not admin_secret or secret != admin_secret:
         return JSONResponse({"success": False, "message": "无权限"}, status_code=403)
     data = load_invites()
     return JSONResponse({"success": True, "codes": data["codes"]})
