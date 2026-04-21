@@ -174,6 +174,7 @@ export default function StudioPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [saveProfileName, setSaveProfileName] = useState("");
   const [transcribeDone, setTranscribeDone] = useState(false);
+  const [audioDuration, setAudioDuration] = useState(0);
   
   const [err, setErr] = useState("");
   const [history, setHistory] = useState<{task_id:string, video_url:string, time:string, subtitle:string}[]>([])
@@ -837,7 +838,8 @@ export default function StudioPage() {
               {generatingAudio && <div style={{ fontSize: 11, color: "#475569", marginTop: 5 }}>⏳ 生成中，约1-2分钟…</div>}
               {audioUrl && (
                 <div style={{ marginTop: 7 }}>
-                  <audio src={audioUrl} controls style={{ width: "100%", height: 28 }} />
+                  <audio src={audioUrl} controls style={{ width: "100%", height: 28 }}
+                    onLoadedMetadata={e => setAudioDuration((e.target as HTMLAudioElement).duration)} />
                   <div style={{ fontSize: 10, color: "#22d3ee", marginTop: 3 }}>✓ 音频生成完成</div>
                 </div>
               )}
@@ -866,7 +868,13 @@ export default function StudioPage() {
               <div style={{ marginTop: 7 }}>
                 <Btn onClick={genVideo} loading={generatingVideo} color="#22d3ee" full>🎭 生成数字人视频</Btn>
               </div>
-              {generatingVideo && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>⏳ 生成中，预计3-5分钟（已耗时 {videoGenElapsed}s）</div>}
+              {!generatingVideo && audioDuration > 0 && (() => {
+                const segs = Math.ceil(audioDuration / 60);
+                return segs > 1
+                  ? <div style={{ fontSize: 11, color: "#f59e0b", marginTop: 5 }}>⚠ 音频{Math.round(audioDuration)}秒，将分{segs}段处理后拼接，预计{segs * 5}-{segs * 10}分钟</div>
+                  : <div style={{ fontSize: 11, color: "#475569", marginTop: 5 }}>音频{Math.round(audioDuration)}秒，预计3-5分钟</div>;
+              })()}
+              {generatingVideo && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>⏳ 生成中（已耗时 {videoGenElapsed}s）</div>}
               {rawVideoUrl && <div style={{ fontSize: 10, color: "#22d3ee", marginTop: 5 }}>✓ 数字人视频生成完成</div>}
             </Section>
 

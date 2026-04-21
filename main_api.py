@@ -1,4 +1,4 @@
-import subprocess, uuid, os, threading, asyncio, json, re, hashlib, socket, time, shutil
+import subprocess, uuid, os, threading, asyncio, json, re, hashlib, socket, time, shutil, math
 import edge_tts
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -917,30 +917,84 @@ async def generate_audio(text: str = Form(...), voice: str = Form(default="xiaox
 # 数字人 LivePortrait
 # ===================================================
 def run_liveportrait(task_id, source_path, audio_path, out_path):
-    tasks[task_id] = {"status": "running", "step": "生成数字人视频"}
+    tasks[task_id] = {"status": "running", "step": "分析音频"}
     output_file = f"{out_path}/output.mp4"
+    heygem_dir = "/root/autodl-tmp/HeyGem-Linux-Python-Hack"
     try:
-        import shutil
+        import glob as _glob
         env = os.environ.copy()
         env["CONDA_DEFAULT_ENV"] = "heygem"
         env["PATH"] = "/root/miniconda3/envs/heygem/bin:" + env.get("PATH", "")
-        result = subprocess.run([
-            "/root/miniconda3/envs/heygem/bin/python", "run.py",
-            "--audio_path", audio_path,
-            "--video_path", source_path,
-        ], capture_output=True, text=True, cwd="/root/autodl-tmp/HeyGem-Linux-Python-Hack", timeout=600, env=env)
-        heygem_dir = "/root/autodl-tmp/HeyGem-Linux-Python-Hack"
-        heygem_output = f"{heygem_dir}/1004-r.mp4"
-        if not os.path.exists(heygem_output):
-            import glob as _glob
-            mp4s = sorted(_glob.glob(f"{heygem_dir}/*.mp4"), key=os.path.getmtime, reverse=True)
-            if mp4s:
-                heygem_output = mp4s[0]
-        if os.path.exists(heygem_output):
-            shutil.copy(heygem_output, output_file)
-            tasks[task_id] = {"status": "done", "type": "video", "video_url": f"{BACKEND_URL}/file/{task_id}/output.mp4"}
+
+        # 获取音频时长
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", audio_path],
+            capture_output=True, text=True)
+        try:
+            total_dur = float(probe.stdout.strip())
+        except Exception:
+            total_dur = 0
+
+        SEG_LEN = 60
+        if total_dur > SEG_LEN:
+            n_segs = math.ceil(total_dur / SEG_LEN)
+            seg_audios = []
+            for i in range(n_segs):
+                seg_path = f"{out_path}/seg_{i}.wav"
+                subprocess.run([
+                    "ffmpeg", "-y", "-i", audio_path,
+                    "-ss", str(i * SEG_LEN), "-t", str(SEG_LEN),
+                    "-ar", "16000", "-ac", "1", seg_path
+                ], capture_output=True)
+                if os.path.exists(seg_path) and os.path.getsize(seg_path) > 0:
+                    seg_audios.append(seg_path)
         else:
-            tasks[task_id] = {"status": "failed", "error": (result.stderr[-300:] if result.stderr else result.stdout[-300:]) or "未生成视频，请检查HeyGem配置"}
+            seg_audios = [audio_path]
+
+        seg_videos = []
+        for i, seg_audio in enumerate(seg_audios):
+            tasks[task_id]["step"] = f"生成第{i+1}/{len(seg_audios)}段视频"
+            result = subprocess.run([
+                "/root/miniconda3/envs/heygem/bin/python", "run.py",
+                "--audio_path", seg_audio,
+                "--video_path", source_path,
+            ], capture_output=True, text=True,
+               cwd=heygem_dir, timeout=1800, env=env)
+
+            heygem_output = f"{heygem_dir}/1004-r.mp4"
+            if not os.path.exists(heygem_output):
+                mp4s = sorted(_glob.glob(f"{heygem_dir}/*.mp4"), key=os.path.getmtime, reverse=True)
+                if mp4s:
+                    heygem_output = mp4s[0]
+
+            if not os.path.exists(heygem_output):
+                err = (result.stderr[-300:] if result.stderr else result.stdout[-300:]) or "未生成视频"
+                tasks[task_id] = {"status": "failed", "error": f"第{i+1}段失败: {err}"}
+                return
+
+            seg_out = f"{out_path}/seg_{i}_out.mp4"
+            shutil.copy(heygem_output, seg_out)
+            seg_videos.append(seg_out)
+
+        if len(seg_videos) == 1:
+            shutil.copy(seg_videos[0], output_file)
+        else:
+            tasks[task_id]["step"] = f"拼接{len(seg_videos)}段视频"
+            concat_list = f"{out_path}/concat.txt"
+            with open(concat_list, "w") as f:
+                for v in seg_videos:
+                    f.write(f"file '{v}'\n")
+            subprocess.run([
+                "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+                "-i", concat_list, "-c", "copy", output_file
+            ], capture_output=True, timeout=300)
+
+        if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            tasks[task_id] = {"status": "done", "type": "video",
+                              "video_url": f"{BACKEND_URL}/file/{task_id}/output.mp4"}
+        else:
+            tasks[task_id] = {"status": "failed", "error": "视频拼接失败"}
     except Exception as e:
         tasks[task_id] = {"status": "failed", "error": str(e)}
 
