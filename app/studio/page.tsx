@@ -662,7 +662,7 @@ export default function StudioPage() {
                     style={{padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer",
                       background: scriptType === t ? "rgba(129,140,248,.2)" : "#0a0f1e",
                       border: "1px solid " + (scriptType === t ? "#818cf8" : "#1e293b"),
-                      color: scriptType === t ? "#818cf8" : "#475569"}}>
+                      color: scriptType === t ? "#818cf8" : "#cbd5e1"}}>
                     {t}
                   </button>
                 ))}
@@ -672,7 +672,7 @@ export default function StudioPage() {
             <Section title="爆款元素（最多3个）" icon="🔥">
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 7 }}>
                 {VIRAL_ELEMENTS.map(el => (
-                  <button key={el.id} onClick={() => toggleEl(el.id)} style={{ padding: "3px 9px", borderRadius: 10, fontSize: 11, border: "1px solid", borderColor: selectedElements.includes(el.id) ? "#818cf8" : "#1e293b", background: selectedElements.includes(el.id) ? "rgba(129,140,248,.15)" : "transparent", color: selectedElements.includes(el.id) ? "#818cf8" : "#475569", cursor: selectedElements.length >= 3 && !selectedElements.includes(el.id) ? "not-allowed" : "pointer", opacity: selectedElements.length >= 3 && !selectedElements.includes(el.id) ? 0.4 : 1 }}>
+                  <button key={el.id} onClick={() => toggleEl(el.id)} style={{ padding: "3px 9px", borderRadius: 10, fontSize: 11, border: "1px solid", borderColor: selectedElements.includes(el.id) ? "#818cf8" : "#1e293b", background: selectedElements.includes(el.id) ? "rgba(129,140,248,.15)" : "transparent", color: selectedElements.includes(el.id) ? "#818cf8" : "#cbd5e1", cursor: selectedElements.length >= 3 && !selectedElements.includes(el.id) ? "not-allowed" : "pointer", opacity: selectedElements.length >= 3 && !selectedElements.includes(el.id) ? 0.4 : 1 }}>
                     {el.icon} {el.title}
                   </button>
                 ))}
