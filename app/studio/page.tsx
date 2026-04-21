@@ -173,6 +173,7 @@ export default function StudioPage() {
   const [selectedProfile, setSelectedProfile] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [saveProfileName, setSaveProfileName] = useState("");
+  const [transcribeDone, setTranscribeDone] = useState(false);
   
   const [err, setErr] = useState("");
   const [history, setHistory] = useState<{task_id:string, video_url:string, time:string, subtitle:string}[]>([])
@@ -358,6 +359,7 @@ export default function StudioPage() {
       const d = await r.json();
       if (d.success) {
         setVoiceTranscript(d.text || "");
+        setTranscribeDone(true);
         console.log("识别结果:", d.text);
       } else {
         setErr(d.error || "识别失败");
@@ -773,7 +775,7 @@ export default function StudioPage() {
                         </div>
                         <input ref={voiceRef} type="file" accept="audio/*" style={{ display: "none" }} onChange={e => {
                           const f = e.target.files?.[0];
-                          if (f) { setVoiceSample(f); setVoiceTranscript(""); }
+                          if (f) { setVoiceSample(f); setVoiceTranscript(""); setTranscribeDone(false); setSaveProfileName(""); }
                         }} />
                       </div>
 
@@ -785,21 +787,21 @@ export default function StudioPage() {
                           </button>
 
                           {voiceTranscript && (
-                            <>
-                              <div style={{ marginBottom: 10 }}>
-                                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>识别结果（可编辑）</div>
-                                <textarea value={voiceTranscript} onChange={e => setVoiceTranscript(e.target.value)}
-                                  rows={3} style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "8px", color: "white", fontSize: 11, resize: "vertical", boxSizing: "border-box" }} />
-                              </div>
-                              <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
-                                <input value={saveProfileName} onChange={e => setSaveProfileName(e.target.value)}
-                                  placeholder="命名此音色…" style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }} />
-                                <button onClick={saveVoiceProfile} disabled={savingProfile || !saveProfileName.trim()}
-                                  style={{ padding: "6px 12px", borderRadius: 6, border: "none", background: "#334155", color: "#94a3b8", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
-                                  {savingProfile ? "保存中…" : "💾 保存音色"}
-                                </button>
-                              </div>
-                            </>
+                            <div style={{ marginBottom: 10 }}>
+                              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>识别结果（可编辑）</div>
+                              <textarea value={voiceTranscript} onChange={e => setVoiceTranscript(e.target.value)}
+                                rows={3} style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "8px", color: "white", fontSize: 11, resize: "vertical", boxSizing: "border-box" }} />
+                            </div>
+                          )}
+                          {transcribeDone && (
+                            <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
+                              <input value={saveProfileName} onChange={e => setSaveProfileName(e.target.value)}
+                                placeholder="命名此音色…" style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }} />
+                              <button onClick={saveVoiceProfile} disabled={savingProfile || !saveProfileName.trim() || !voiceTranscript}
+                                style={{ padding: "6px 12px", borderRadius: 6, border: "none", background: "#334155", color: "#94a3b8", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                {savingProfile ? "保存中…" : "💾 保存音色"}
+                              </button>
+                            </div>
                           )}
                         </>
                       )}
