@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { NextRequest, NextResponse } from "next/server";
 
 const LIVEPORTRAIT_API = process.env.LIVEPORTRAIT_API_URL || "";
