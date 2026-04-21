@@ -1,7 +1,12 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 
-const API = "https://u946450-a783-20029e21.westc.seetacloud.com:8443";
+function getApi() {
+  if (typeof localStorage !== "undefined") {
+    return (localStorage.getItem("backend_url") || "").replace(/\/$/, "");
+  }
+  return "";
+}
 
 const VOICES = [
   { id: "xiaoxiao", name: "晓晓", desc: "温柔女声" },
@@ -87,7 +92,7 @@ function getAuthHeaders(): Record<string, string> {
 function pollTask(taskId: string, onDone: (d: any) => void, onError: (e: string) => void, onProgress?: (step: string) => void) {
   const iv = setInterval(async () => {
     try {
-      const r = await fetch(`${API}/status/${taskId}`, { headers: getAuthHeaders() });
+      const r = await fetch(`${getApi()}/status/${taskId}`, { headers: getAuthHeaders() });
       const d = await r.json();
       if (d.status === "done") { clearInterval(iv); onDone(d); }
       else if (d.status === "failed") { clearInterval(iv); onError(d.error || "生成失败"); }
@@ -101,6 +106,7 @@ export default function StudioPage() {
     setTempCookie(localStorage.getItem("douyin_cookie") || "");
     setTempQwenKey(localStorage.getItem("qwen_key") || "");
     setTempActivation(localStorage.getItem("activation_code") || "");
+    setTempBackendUrl(localStorage.getItem("backend_url") || "");
     setSettingsOpen(true);
   };
 
@@ -108,6 +114,7 @@ export default function StudioPage() {
     localStorage.setItem("douyin_cookie", tempCookie);
     localStorage.setItem("qwen_key", tempQwenKey);
     localStorage.setItem("activation_code", tempActivation);
+    localStorage.setItem("backend_url", tempBackendUrl);
     setSettingsOpen(false);
   };
 
@@ -155,6 +162,7 @@ export default function StudioPage() {
   const [tempCookie, setTempCookie] = useState("");
   const [tempQwenKey, setTempQwenKey] = useState("");
   const [tempActivation, setTempActivation] = useState("");
+  const [tempBackendUrl, setTempBackendUrl] = useState("");
   const [qrModal, setQrModal] = useState(false);
   const [qrUrl, setQrUrl] = useState("");
   const [qrToken, setQrToken] = useState("");
@@ -199,7 +207,7 @@ export default function StudioPage() {
       if (isSingleVideo(douyinUrl)) {
         // 单个视频：用 yt-dlp 直接下载（自动处理反爬）
         setErr("正在下载视频并提取文案，约1-2分钟…");
-        const dlRes = await fetch(`${API}/download-transcribe`, {
+        const dlRes = await fetch(`${getApi()}/download-transcribe`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ video_url: douyinUrl, cookie }),
@@ -284,7 +292,7 @@ export default function StudioPage() {
     setRewriting(true); setErr("");
     try {
       const qwenKey = localStorage.getItem("qwen_key") || "";
-      const res = await fetch(`${API}/rewrite`, {
+      const res = await fetch(`${getApi()}/rewrite`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -297,7 +305,7 @@ export default function StudioPage() {
 
       // 自动生成标题
       try {
-        const titleRes = await fetch(`${API}/generate-title`, {
+        const titleRes = await fetch(`${getApi()}/generate-title`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-Qwen-Key": localStorage.getItem("qwen_key") || "" },
           body: JSON.stringify({ text: d.result || "" }),
@@ -320,7 +328,7 @@ export default function StudioPage() {
 
   const loadProfiles = async () => {
     try {
-      const r = await fetch(`${API}/voice/list`);
+      const r = await fetch(`${getApi()}/voice/list`);
       const d = await r.json();
       if (d.success) setSavedProfiles(d.profiles || []);
     } catch {}
@@ -334,7 +342,7 @@ export default function StudioPage() {
       fd.append("name", saveProfileName.trim());
       fd.append("prompt_text", voiceTranscript);
       fd.append("voice_sample", voiceSample);
-      await fetch(`${API}/voice/save`, { method: "POST", body: fd });
+      await fetch(`${getApi()}/voice/save`, { method: "POST", body: fd });
       await loadProfiles();
       setSaveProfileName("");
     } catch {}
@@ -343,7 +351,7 @@ export default function StudioPage() {
 
   const deleteProfile = async (name: string) => {
     try {
-      await fetch(`${API}/voice/${encodeURIComponent(name)}`, { method: "DELETE" });
+      await fetch(`${getApi()}/voice/${encodeURIComponent(name)}`, { method: "DELETE" });
       setSavedProfiles(p => p.filter(x => x.name !== name));
       if (selectedProfile === name) setSelectedProfile("");
     } catch {}
@@ -356,7 +364,7 @@ export default function StudioPage() {
     try {
       const fd = new FormData();
       fd.append("audio", voiceSample);
-      const r = await fetch(`${API}/transcribe`, { method: "POST", body: fd });
+      const r = await fetch(`${getApi()}/transcribe`, { method: "POST", body: fd });
       const d = await r.json();
       if (d.success) {
         setVoiceTranscript(d.text || "");
@@ -377,7 +385,7 @@ export default function StudioPage() {
       const fd = new FormData();
       fd.append("text", rewrittenScript);
 
-      let endpoint = `${API}/generate-audio`;
+      let endpoint = `${getApi()}/generate-audio`;
 
       console.log('voiceMode:', voiceMode, 'voiceTranscript:', voiceTranscript, 'voiceSample:', voiceSample);
 
@@ -385,14 +393,14 @@ export default function StudioPage() {
         if (cloneSubMode === "saved" && selectedProfile) {
           fd.append("profile_name", selectedProfile);
           fd.append("speed", voiceSpeed.toString());
-          endpoint = `${API}/clone-tts-profile`;
+          endpoint = `${getApi()}/clone-tts-profile`;
         } else {
           if (!voiceSample) { setErr("请先上传声音样本"); setGeneratingAudio(false); return; }
           if (!voiceTranscript.trim()) { setErr("请先识别声音文字"); setGeneratingAudio(false); return; }
           fd.append("prompt_text", voiceTranscript);
           fd.append("speed", voiceSpeed.toString());
           fd.append("voice_sample", voiceSample);
-          endpoint = `${API}/clone-tts`;
+          endpoint = `${getApi()}/clone-tts`;
         }
       } else {
         fd.append("voice", selectedVoice);
@@ -419,7 +427,7 @@ export default function StudioPage() {
       fd.append("bgm_file", bgmFile);
       fd.append("font_file", fontFile);
       fd.append("invite_code", localStorage.getItem("invite_code") || "");
-      const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
+      const r = await fetch(`${getApi()}/merge`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
@@ -441,7 +449,7 @@ export default function StudioPage() {
       const fd = new FormData();
       fd.append("source_video", drivingVideo);
       fd.append("audio_file", audioBlob, "audio.mp3");
-      const r = await fetch(`${API}/generate-video`, { method: "POST", body: fd });
+      const r = await fetch(`${getApi()}/generate-video`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       setVideoGenElapsed(0);
@@ -470,7 +478,7 @@ export default function StudioPage() {
       fd.append("bgm_file", bgmFile);
       fd.append("font_file", fontFile);
       fd.append("invite_code", localStorage.getItem("invite_code") || "");
-      const r = await fetch(`${API}/merge`, { method: "POST", body: fd });
+      const r = await fetch(`${getApi()}/merge`, { method: "POST", body: fd });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       pollTask(d.task_id,
@@ -493,7 +501,7 @@ export default function StudioPage() {
   // 获取历史记录
   const handleDeleteHistory = async (taskId: string) => {
     try {
-      await fetch(`${API}/history/delete`, {
+      await fetch(`${getApi()}/history/delete`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({task_id: taskId})
@@ -504,7 +512,7 @@ export default function StudioPage() {
 
 
   useEffect(() => {
-    fetch(`${API}/history?invite_code=${localStorage.getItem("invite_code") || ""}`)
+    fetch(`${getApi()}/history?invite_code=${localStorage.getItem("invite_code") || ""}`)
       .then(r => r.json())
       .then(d => { if(d.success) setHistory(d.history) })
       .catch(() => {})
@@ -516,7 +524,8 @@ export default function StudioPage() {
     setTempActivation(localStorage.getItem("activation_code") || "");
     const cookie = localStorage.getItem("douyin_cookie");
     const key = localStorage.getItem("qwen_key");
-    if (!cookie || !key) setSettingsOpen(true);
+    const backendUrl = localStorage.getItem("backend_url");
+    if (!cookie || !key || !backendUrl) setSettingsOpen(true);
     loadProfiles();
   }, []);
 
@@ -586,9 +595,14 @@ export default function StudioPage() {
               <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>Qwen API Key</div>
               <input value={tempQwenKey} onChange={e => setTempQwenKey(e.target.value)} placeholder="sk-..." style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11 }} />
             </div>
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>激活码</div>
               <input value={tempActivation} onChange={e => setTempActivation(e.target.value)} placeholder="输入激活码..." style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11 }} />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>服务器地址</div>
+              <input value={tempBackendUrl} onChange={e => setTempBackendUrl(e.target.value)} placeholder="https://xxx.seetacloud.com:8443" style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "8px 10px", color: "white", fontSize: 11 }} />
+              <div style={{ fontSize: 10, color: "#64748b", marginTop: 4 }}>在 AutoDL 控制台实例页面复制公网地址</div>
             </div>
             <button onClick={saveSettings} style={{ width: "100%", background: "#6366f1", border: "none", borderRadius: 8, padding: "10px", color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>保存设置</button>
           </div>
@@ -903,14 +917,14 @@ export default function StudioPage() {
                     <input type="file" accept="audio/*" style={{display:"none"}} onChange={async e => {
                       const file = e.target.files?.[0]; if (!file) return;
                       const fd = new FormData(); fd.append("file", file);
-                      const r = await fetch(`${API}/upload-bgm`, {method:"POST", body:fd});
+                      const r = await fetch(`${getApi()}/upload-bgm`, {method:"POST", body:fd});
                       const d = await r.json();
                       if (d.filename) { setBgmFile(d.filename); }
                     }} />
                   </label>
                 </div>
                 {bgmFile && (
-                  <audio controls src={`${API}/bgm/${bgmFile}`} style={{height:32, width:"100%", marginTop:6}} />
+                  <audio controls src={`${getApi()}/bgm/${bgmFile}`} style={{height:32, width:"100%", marginTop:6}} />
                 )}
               </div>
 
