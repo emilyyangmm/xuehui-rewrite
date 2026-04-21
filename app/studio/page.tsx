@@ -548,7 +548,7 @@ export default function StudioPage() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-              <button onClick={() => setQrModal(false)} style={{ flex: 1, background: "none", border: "1px solid #334155", borderRadius: 8, padding: "9px", color: "#64748b", cursor: "pointer", fontSize: 13 }}>关闭</button>
+              <button onClick={() => setQrModal(false)} style={{ flex: 1, background: "none", border: "1px solid #334155", borderRadius: 8, padding: "9px", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>关闭</button>
               <button onClick={() => { setQrModal(false); }} style={{ flex: 1, background: "#6366f1", border: "none", borderRadius: 8, padding: "9px", color: "white", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>我已复制好，去粘贴 →</button>
             </div>
           </div>
@@ -560,7 +560,7 @@ export default function StudioPage() {
           <div style={{ background: "#0f172a", borderRadius: 16, padding: 24, width: 400, border: "1px solid #1e293b" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h2 style={{ fontSize: 16, fontWeight: 600 }}>⚙️ 账号设置</h2>
-              <button onClick={() => setSettingsOpen(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18 }}>✕</button>
+              <button onClick={() => setSettingsOpen(false)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
             {(!localStorage.getItem("douyin_cookie") || !localStorage.getItem("qwen_key")) && (
               <div style={{ background: "rgba(99,102,241,.15)", border: "1px solid rgba(99,102,241,.3)", borderRadius: 8, padding: "10px 12px", marginBottom: 16, fontSize: 12, color: "#a5b4fc", lineHeight: 1.6 }}>
@@ -600,10 +600,10 @@ export default function StudioPage() {
         <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#818cf8,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>⚡</div>
         <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "0.1em", background: "linear-gradient(90deg,#818cf8,#22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>DIGITAL STUDIO</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-          <button onClick={openSettings} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: "4px 8px", color: "#64748b" }}>⚙️</button>
+          <button onClick={openSettings} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: "4px 8px", color: "#94a3b8" }}>⚙️</button>
           {err && <span style={{ fontSize: 11, color: "#f87171", background: "rgba(248,113,113,.1)", padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(248,113,113,.2)", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⚠ {err}</span>}
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22d3ee", boxShadow: "0 0 6px #22d3ee" }} />
-          <span style={{ fontSize: 10, color: "#334155", letterSpacing: "0.1em" }}>LIVE</span>
+          <span style={{ fontSize: 10, color: "#94a3b8", letterSpacing: "0.1em" }}>LIVE</span>
         </div>
       </div>
 
@@ -638,12 +638,12 @@ export default function StudioPage() {
                     <div key={v.id} onClick={() => selectVideo(v)} style={{ display: "flex", gap: 8, padding: "7px 8px", background: "#0a0f1e", borderRadius: 7, border: "1px solid #0f172a", cursor: "pointer" }}
                       onMouseEnter={e => (e.currentTarget.style.borderColor = "#818cf8")}
                       onMouseLeave={e => (e.currentTarget.style.borderColor = "#0f172a")}>
-                      <div style={{ width: 36, height: 48, borderRadius: 5, background: "#1e293b", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#475569" }}>
+                      <div style={{ width: 36, height: 48, borderRadius: 5, background: "#1e293b", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#94a3b8" }}>
                         {v.cover ? <img src={v.cover} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : `#${i+1}`}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 11, color: "#cbd5e1", lineHeight: 1.4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}>{v.title}</div>
-                        <div style={{ fontSize: 10, color: "#334155", marginTop: 3 }}>▶ {fmt(v.play_count)} · ♥ {fmt(v.like_count)}</div>
+                        <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 3 }}>▶ {fmt(v.play_count)} · ♥ {fmt(v.like_count)}</div>
                       </div>
                     </div>
                   ))}
@@ -685,13 +685,13 @@ export default function StudioPage() {
             <Section title="改写文案" icon="✨">
               <textarea value={rewrittenScript} onChange={e => setRewrittenScript(e.target.value)} placeholder="改写后在此显示，可直接编辑…" rows={6} style={taStyle} />
               {rewrittenScript && (
-                <button onClick={() => navigator.clipboard.writeText(rewrittenScript)} style={{ marginTop: 5, padding: "3px 12px", borderRadius: 6, background: "none", border: "1px solid #1e293b", color: "#475569", fontSize: 11, cursor: "pointer" }}>复制文案</button>
+                <button onClick={() => navigator.clipboard.writeText(rewrittenScript)} style={{ marginTop: 5, padding: "3px 12px", borderRadius: 6, background: "none", border: "1px solid #1e293b", color: "#94a3b8", fontSize: 11, cursor: "pointer" }}>复制文案</button>
               )}
             </Section>
 
             <Section title="爆款标题" icon="🏷">
               {titles.length === 0 ? (
-                <div style={{ fontSize: 11, color: "#334155" }}>改写后自动生成标题…</div>
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>改写后自动生成标题…</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {titles.map((t, i) => (
@@ -740,7 +740,7 @@ export default function StudioPage() {
                     {VOICES.map(v => (
                       <button key={v.id} onClick={() => setSelectedVoice(v.id)} style={{ padding: "7px 8px", borderRadius: 7, border: "1px solid", borderColor: selectedVoice === v.id ? "#22d3ee" : "#1e293b", background: selectedVoice === v.id ? "rgba(34,211,238,.08)" : "#0a0f1e", cursor: "pointer", textAlign: "left" as const }}>
                         <div style={{ fontWeight: 600, fontSize: 12, color: selectedVoice === v.id ? "#22d3ee" : "#cbd5e1" }}>{v.name}</div>
-                        <div style={{ fontSize: 10, color: "#475569" }}>{v.desc}</div>
+                        <div style={{ fontSize: 10, color: "#94a3b8" }}>{v.desc}</div>
                       </button>
                     ))}
                   </div>
@@ -765,7 +765,7 @@ export default function StudioPage() {
                           {voiceSample ? (
                             <div style={{ color: "#22d3ee", fontSize: 12 }}>✓ {voiceSample.name}</div>
                           ) : (
-                            <div style={{ color: "#475569", fontSize: 11 }}>点击上传音频（mp3/wav/m4a）</div>
+                            <div style={{ color: "#94a3b8", fontSize: 11 }}>点击上传音频（mp3/wav/m4a）</div>
                           )}
                         </div>
                         <input ref={voiceRef} type="file" accept="audio/*" style={{ display: "none" }} onChange={e => {
@@ -804,7 +804,7 @@ export default function StudioPage() {
                   ) : (
                     <>
                       {savedProfiles.length === 0 ? (
-                        <div style={{ fontSize: 11, color: "#334155", textAlign: "center", padding: "16px 0" }}>暂无已保存音色，先上传样本并保存</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", padding: "16px 0" }}>暂无已保存音色，先上传样本并保存</div>
                       ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
                           {savedProfiles.map(p => (
@@ -812,7 +812,7 @@ export default function StudioPage() {
                               style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 8px", borderRadius: 7, border: "1px solid", borderColor: selectedProfile === p.name ? "#22d3ee" : "#1e293b", background: selectedProfile === p.name ? "rgba(34,211,238,.06)" : "#0a0f1e", cursor: "pointer" }}>
                               <div style={{ flex: 1, fontSize: 12, color: selectedProfile === p.name ? "#22d3ee" : "#cbd5e1" }}>{p.name}</div>
                               <button onClick={e => { e.stopPropagation(); deleteProfile(p.name); }}
-                                style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>🗑</button>
+                                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>🗑</button>
                             </div>
                           ))}
                         </div>
@@ -824,7 +824,7 @@ export default function StudioPage() {
                     <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>语速：{voiceSpeed.toFixed(1)}x</div>
                     <input type="range" min="0.8" max="1.5" step="0.1" value={voiceSpeed} onChange={e => setVoiceSpeed(parseFloat(e.target.value))}
                       style={{ width: "100%", accentColor: "#22d3ee" }} />
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#475569" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94a3b8" }}>
                       <span>0.8x (慢)</span>
                       <span>1.5x (快)</span>
                     </div>
@@ -835,7 +835,7 @@ export default function StudioPage() {
               <div style={{ marginTop: 7 }}>
                 <Btn onClick={generateAudio} loading={generatingAudio} color="#22d3ee" full>🎙 生成口播音频</Btn>
               </div>
-              {generatingAudio && <div style={{ fontSize: 11, color: "#475569", marginTop: 5 }}>⏳ 生成中，约1-2分钟…</div>}
+              {generatingAudio && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>⏳ 生成中，约1-2分钟…</div>}
               {audioUrl && (
                 <div style={{ marginTop: 7 }}>
                   <audio src={audioUrl} controls style={{ width: "100%", height: 28 }}
@@ -847,7 +847,7 @@ export default function StudioPage() {
 
             {/* 上传驱动视频 */}
             <Section title="上传你的视频（不说话）" icon="🎬">
-              <div style={{ fontSize: 11, color: "#475569", marginBottom: 6 }}>尽量正面对镜头，不要大幅度摇晃</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>尽量正面对镜头，不要大幅度摇晃</div>
               <div onClick={() => vidRef.current?.click()} style={{ border: "1px dashed #1e293b", borderRadius: 10, height: 80, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "#0a0f1e" }}>
                 {drivingVideo ? (
                   <div style={{ textAlign: "center" as const, color: "#22d3ee" }}>
@@ -855,7 +855,7 @@ export default function StudioPage() {
                     <div style={{ fontSize: 11 }}>{drivingVideo.name}</div>
                   </div>
                 ) : (
-                  <div style={{ textAlign: "center" as const, color: "#334155" }}>
+                  <div style={{ textAlign: "center" as const, color: "#94a3b8" }}>
                     <div style={{ fontSize: 28 }}>🎥</div>
                     <div style={{ fontSize: 11, marginTop: 4 }}>点击上传视频（MP4）</div>
                   </div>
@@ -872,14 +872,14 @@ export default function StudioPage() {
                 const segs = Math.ceil(audioDuration / 60);
                 return segs > 1
                   ? <div style={{ fontSize: 11, color: "#f59e0b", marginTop: 5 }}>⚠ 音频{Math.round(audioDuration)}秒，将分{segs}段处理后拼接，预计{segs * 5}-{segs * 10}分钟</div>
-                  : <div style={{ fontSize: 11, color: "#475569", marginTop: 5 }}>音频{Math.round(audioDuration)}秒，预计3-5分钟</div>;
+                  : <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>音频{Math.round(audioDuration)}秒，预计3-5分钟</div>;
               })()}
               {generatingVideo && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>⏳ 生成中（已耗时 {videoGenElapsed}s）</div>}
               {rawVideoUrl && <div style={{ fontSize: 10, color: "#22d3ee", marginTop: 5 }}>✓ 数字人视频生成完成</div>}
             </Section>
 
             <Section title="合并输出" icon="🎬">
-              <div style={{ fontSize: 11, color: "#475569", marginBottom: 7 }}>将数字人视频 + 口播音频 + 字幕合并为最终视频</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 7 }}>将数字人视频 + 口播音频 + 字幕合并为最终视频</div>
               
               {/* BGM选择 */}
               <div style={{marginBottom:10}}>
@@ -918,7 +918,7 @@ export default function StudioPage() {
               <Btn onClick={merge} loading={merging} color="#a78bfa" full>
                 {merging ? "合并中，请稍候…" : "⚡ 一键合并"}
               </Btn>
-              {merging && <div style={{ fontSize: 11, color: "#475569", marginTop: 5 }}>⏳ 合并中，约30-60秒…</div>}
+              {merging && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>⏳ 合并中，约30-60秒…</div>}
             </Section>
           </div>
         </div>
@@ -967,11 +967,11 @@ export default function StudioPage() {
                       onClick={() => setFinalVideoUrl(h.video_url)}
                       style={{display: "flex", alignItems: "center", gap: 8, background: "#1e293b", borderRadius: 8, padding: "8px 12px", cursor: "pointer", border: "1px solid #334155"}}>
                       <div style={{flex: 1, minWidth: 0}}>
-                        <div style={{fontSize: 11, color: "#64748b"}}>{h.time}</div>
+                        <div style={{fontSize: 11, color: "#94a3b8"}}>{h.time}</div>
                         <div style={{fontSize: 12, color: "#e2e8f0", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{h.subtitle}...</div>
                       </div>
                       <button onClick={(e) => { e.stopPropagation(); handleDeleteHistory(h.task_id); }}
-                        style={{background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 12, padding: "4px"}}>
+                        style={{background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 12, padding: "4px"}}>
                         🗑
                       </button>
                     </div>
@@ -1009,7 +1009,7 @@ function ColHeader({ label, title, color }: { label: string; title: string; colo
 function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
     <div style={{ padding: "10px 12px", borderBottom: "1px solid #080d1a" }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: "#334155", letterSpacing: "0.08em", marginBottom: 7, display: "flex", alignItems: "center", gap: 4 }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", letterSpacing: "0.08em", marginBottom: 7, display: "flex", alignItems: "center", gap: 4 }}>
         <span>{icon}</span> {title.toUpperCase()}
       </div>
       {children}
