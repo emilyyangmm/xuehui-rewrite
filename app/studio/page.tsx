@@ -297,8 +297,8 @@ export default function StudioPage() {
       try {
         const titleRes = await fetch(`${API}/generate-title`, {
           method: "POST",
-          headers: { "X-Qwen-Key": localStorage.getItem("qwen_key") || "" },
-          body: (() => { const fd = new FormData(); fd.append("text", d.result || ""); return fd })()
+          headers: { "Content-Type": "application/json", "X-Qwen-Key": localStorage.getItem("qwen_key") || "" },
+          body: JSON.stringify({ text: d.result || "" }),
         });
         const titleData = await titleRes.json();
         if (titleData.result) {
