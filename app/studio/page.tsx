@@ -132,8 +132,6 @@ export default function StudioPage() {
   const [selectedElements, setSelectedElements] = useState<string[]>([]);
   const [industry, setIndustry] = useState("职场");
   const [scriptType, setScriptType] = useState("聊观点");
-  const [voiceProfiles, setVoiceProfiles] = useState<any[]>([]);
-  const [voiceName, setVoiceName] = useState("");
   const [titles, setTitles] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
 
@@ -170,6 +168,11 @@ export default function StudioPage() {
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceSpeed, setVoiceSpeed] = useState(1.0);
   const [transcribing, setTranscribing] = useState(false);
+  const [cloneSubMode, setCloneSubMode] = useState<"upload" | "saved">("upload");
+  const [savedProfiles, setSavedProfiles] = useState<{name:string, prompt_text:string}[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [saveProfileName, setSaveProfileName] = useState("");
   
   const [err, setErr] = useState("");
   const [history, setHistory] = useState<{task_id:string, video_url:string, time:string, subtitle:string}[]>([])
@@ -294,6 +297,7 @@ export default function StudioPage() {
       try {
         const titleRes = await fetch(`${API}/generate-title`, {
           method: "POST",
+          headers: { "X-Qwen-Key": localStorage.getItem("qwen_key") || "" },
           body: (() => { const fd = new FormData(); fd.append("text", d.result || ""); return fd })()
         });
         const titleData = await titleRes.json();
@@ -310,6 +314,37 @@ export default function StudioPage() {
       }
     } catch (e: any) { setErr(e.message); }
     finally { setRewriting(false); }
+  };
+
+  const loadProfiles = async () => {
+    try {
+      const r = await fetch(`${API}/voice/list`);
+      const d = await r.json();
+      if (d.success) setSavedProfiles(d.profiles || []);
+    } catch {}
+  };
+
+  const saveVoiceProfile = async () => {
+    if (!voiceSample || !voiceTranscript || !saveProfileName.trim()) return;
+    setSavingProfile(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", saveProfileName.trim());
+      fd.append("prompt_text", voiceTranscript);
+      fd.append("voice_sample", voiceSample);
+      await fetch(`${API}/voice/save`, { method: "POST", body: fd });
+      await loadProfiles();
+      setSaveProfileName("");
+    } catch {}
+    finally { setSavingProfile(false); }
+  };
+
+  const deleteProfile = async (name: string) => {
+    try {
+      await fetch(`${API}/voice/${encodeURIComponent(name)}`, { method: "DELETE" });
+      setSavedProfiles(p => p.filter(x => x.name !== name));
+      if (selectedProfile === name) setSelectedProfile("");
+    } catch {}
   };
 
   // 识别声音样本
@@ -344,13 +379,18 @@ export default function StudioPage() {
       console.log('voiceMode:', voiceMode, 'voiceTranscript:', voiceTranscript, 'voiceSample:', voiceSample);
 
       if (voiceMode === "clone") {
-        // 克隆声音模式 → 调 /clone-tts
-        if (!voiceSample) { setErr("请先上传声音样本"); setGeneratingAudio(false); return; }
-        if (!voiceTranscript.trim()) { setErr("请先识别声音文字"); setGeneratingAudio(false); return; }
-        fd.append("prompt_text", voiceTranscript);
-        fd.append("speed", voiceSpeed.toString());
-        fd.append("voice_sample", voiceSample);
-        endpoint = `${API}/clone-tts`;
+        if (cloneSubMode === "saved" && selectedProfile) {
+          fd.append("profile_name", selectedProfile);
+          fd.append("speed", voiceSpeed.toString());
+          endpoint = `${API}/clone-tts-profile`;
+        } else {
+          if (!voiceSample) { setErr("请先上传声音样本"); setGeneratingAudio(false); return; }
+          if (!voiceTranscript.trim()) { setErr("请先识别声音文字"); setGeneratingAudio(false); return; }
+          fd.append("prompt_text", voiceTranscript);
+          fd.append("speed", voiceSpeed.toString());
+          fd.append("voice_sample", voiceSample);
+          endpoint = `${API}/clone-tts`;
+        }
       } else {
         fd.append("voice", selectedVoice);
       }
@@ -476,10 +516,10 @@ export default function StudioPage() {
     setTempCookie(localStorage.getItem("douyin_cookie") || "");
     setTempQwenKey(localStorage.getItem("qwen_key") || "");
     setTempActivation(localStorage.getItem("activation_code") || "");
-    // 新用户引导：Cookie 或 API Key 未设置时自动弹出设置
     const cookie = localStorage.getItem("douyin_cookie");
     const key = localStorage.getItem("qwen_key");
     if (!cookie || !key) setSettingsOpen(true);
+    loadProfiles();
   }, []);
 
   return (
@@ -710,92 +750,88 @@ export default function StudioPage() {
                 </>
               ) : (
                 <>
-                  {/* 克隆声音模式 */}
-                  {voiceProfiles.length > 0 && (
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>我的声音</div>
-                      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                        {voiceProfiles.map(p => (
-                          <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 6, background: "#1e293b", border: "1px solid #334155" }}>
-                            <span style={{ fontSize: 12, color: "#e2e8f0" }}>{p.name}</span>
-                            <button onClick={async () => {
-                              try {
-                                await fetch(`${API}/voice/${p.name}`, { method: "DELETE" });
-                                setVoiceProfiles(voiceProfiles.filter(x => x.name !== p.name));
-                              } catch {}
-                            }} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 10 }}>✕</button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>上传声音样本</div>
-                    <div onClick={() => voiceRef.current?.click()} style={{ border: "1px dashed #334155", borderRadius: 7, padding: "12px", textAlign: "center", cursor: "pointer", background: "#0a0f1e" }}>
-                      {voiceSample ? (
-                        <div style={{ color: "#22d3ee", fontSize: 12 }}>✓ {voiceSample.name}</div>
-                      ) : (
-                        <div style={{ color: "#475569", fontSize: 11 }}>点击上传音频（mp3/wav/m4a）</div>
-                      )}
-                    </div>
-                    <input ref={voiceRef} type="file" accept="audio/*" style={{ display: "none" }} onChange={e => {
-                      const f = e.target.files?.[0];
-                      if (f) { setVoiceSample(f); setVoiceTranscript(""); }
-                    }} />
-                  </div>
-                  
-                  {voiceSample && (
-                    <>
-                      <button onClick={transcribeVoice} disabled={transcribing}
-                        style={{ width: "100%", padding: "8px", marginBottom: 8, borderRadius: 7, border: "none", background: "#1e293b", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>
-                        {transcribing ? "识别中…" : "🔍 识别文字"}
+                  {/* 克隆模式子标签 */}
+                  <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                    {(["upload","saved"] as const).map(m => (
+                      <button key={m} onClick={() => setCloneSubMode(m)}
+                        style={{ flex: 1, padding: "6px", borderRadius: 6, border: "1px solid", borderColor: cloneSubMode === m ? "#22d3ee" : "#1e293b", background: cloneSubMode === m ? "rgba(34,211,238,.08)" : "transparent", color: cloneSubMode === m ? "#22d3ee" : "#64748b", fontSize: 11, cursor: "pointer" }}>
+                        {m === "upload" ? "上传样本" : `已保存音色(${savedProfiles.length})`}
                       </button>
-                      
-                      {voiceTranscript && !voiceName && (
-                        <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
-                          <input value={voiceName} onChange={e => setVoiceName(e.target.value)} placeholder="输入名字保存此声音"
-                            style={{ flex: 1, padding: "7px 10px", background: "#1e293b", border: "1px solid #334155", borderRadius: 6, color: "white", fontSize: 11 }} />
-                          <button onClick={async () => {
-                            if (!voiceName.trim()) return;
-                            const fd = new FormData();
-                            fd.append("name", voiceName.trim());
-                            fd.append("prompt_text", voiceTranscript);
-                            fd.append("voice_sample", voiceSample!);
-                            try {
-                              const r = await fetch(`${API}/voice/save`, { method: "POST", body: fd });
-                              const d = await r.json();
-                              if (d.success) {
-                                setVoiceProfiles([...voiceProfiles, { name: voiceName.trim(), prompt_text: voiceTranscript }]);
-                                setVoiceName("");
-                                setErr("声音已保存！");
-                              }
-                            } catch {}
-                          }} style={{ padding: "7px 12px", background: "#6366f1", border: "none", borderRadius: 6, color: "white", fontSize: 11, cursor: "pointer" }}>
-                            💾 保存
-                          </button>
-                        </div>
-                      )}
-                      
-                      {voiceTranscript && (
-                        <div style={{ marginBottom: 10 }}>
-                          <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>识别结果（可编辑）</div>
-                          <textarea value={voiceTranscript} onChange={e => setVoiceTranscript(e.target.value)}
-                            rows={3} style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "8px", color: "white", fontSize: 11, resize: "vertical", boxSizing: "border-box" }} />
-                        </div>
-                      )}
-                      
+                    ))}
+                  </div>
+
+                  {cloneSubMode === "upload" ? (
+                    <>
                       <div style={{ marginBottom: 10 }}>
-                        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>语速：{voiceSpeed.toFixed(1)}x</div>
-                        <input type="range" min="0.8" max="1.5" step="0.1" value={voiceSpeed} onChange={e => setVoiceSpeed(parseFloat(e.target.value))}
-                          style={{ width: "100%", accentColor: "#22d3ee" }} />
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#475569" }}>
-                          <span>0.8x (慢)</span>
-                          <span>1.5x (快)</span>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>上传声音样本</div>
+                        <div onClick={() => voiceRef.current?.click()} style={{ border: "1px dashed #334155", borderRadius: 7, padding: "12px", textAlign: "center", cursor: "pointer", background: "#0a0f1e" }}>
+                          {voiceSample ? (
+                            <div style={{ color: "#22d3ee", fontSize: 12 }}>✓ {voiceSample.name}</div>
+                          ) : (
+                            <div style={{ color: "#475569", fontSize: 11 }}>点击上传音频（mp3/wav/m4a）</div>
+                          )}
                         </div>
+                        <input ref={voiceRef} type="file" accept="audio/*" style={{ display: "none" }} onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (f) { setVoiceSample(f); setVoiceTranscript(""); }
+                        }} />
                       </div>
+
+                      {voiceSample && (
+                        <>
+                          <button onClick={transcribeVoice} disabled={transcribing}
+                            style={{ width: "100%", padding: "8px", marginBottom: 10, borderRadius: 7, border: "none", background: "#1e293b", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>
+                            {transcribing ? "识别中…" : "🔍 识别文字"}
+                          </button>
+
+                          {voiceTranscript && (
+                            <>
+                              <div style={{ marginBottom: 10 }}>
+                                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>识别结果（可编辑）</div>
+                                <textarea value={voiceTranscript} onChange={e => setVoiceTranscript(e.target.value)}
+                                  rows={3} style={{ width: "100%", background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "8px", color: "white", fontSize: 11, resize: "vertical", boxSizing: "border-box" }} />
+                              </div>
+                              <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
+                                <input value={saveProfileName} onChange={e => setSaveProfileName(e.target.value)}
+                                  placeholder="命名此音色…" style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "6px 8px", color: "white", fontSize: 11 }} />
+                                <button onClick={saveVoiceProfile} disabled={savingProfile || !saveProfileName.trim()}
+                                  style={{ padding: "6px 12px", borderRadius: 6, border: "none", background: "#334155", color: "#94a3b8", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                  {savingProfile ? "保存中…" : "💾 保存音色"}
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {savedProfiles.length === 0 ? (
+                        <div style={{ fontSize: 11, color: "#334155", textAlign: "center", padding: "16px 0" }}>暂无已保存音色，先上传样本并保存</div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
+                          {savedProfiles.map(p => (
+                            <div key={p.name} onClick={() => setSelectedProfile(p.name)}
+                              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 8px", borderRadius: 7, border: "1px solid", borderColor: selectedProfile === p.name ? "#22d3ee" : "#1e293b", background: selectedProfile === p.name ? "rgba(34,211,238,.06)" : "#0a0f1e", cursor: "pointer" }}>
+                              <div style={{ flex: 1, fontSize: 12, color: selectedProfile === p.name ? "#22d3ee" : "#cbd5e1" }}>{p.name}</div>
+                              <button onClick={e => { e.stopPropagation(); deleteProfile(p.name); }}
+                                style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>🗑</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </>
                   )}
+
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>语速：{voiceSpeed.toFixed(1)}x</div>
+                    <input type="range" min="0.8" max="1.5" step="0.1" value={voiceSpeed} onChange={e => setVoiceSpeed(parseFloat(e.target.value))}
+                      style={{ width: "100%", accentColor: "#22d3ee" }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#475569" }}>
+                      <span>0.8x (慢)</span>
+                      <span>1.5x (快)</span>
+                    </div>
+                  </div>
                 </>
               )}
 
