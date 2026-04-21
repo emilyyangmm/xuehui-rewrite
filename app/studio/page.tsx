@@ -500,12 +500,6 @@ export default function StudioPage() {
     } catch {}
   };
 
-  useEffect(() => {
-    // 获取声音档案列表
-    fetch(`${API}/voice/list`).then(r => r.json()).then(d => {
-      if (d.success) setVoiceProfiles(d.profiles || []);
-    }).catch(() => {});
-  }, []);
 
   useEffect(() => {
     fetch(`${API}/history?invite_code=${localStorage.getItem("invite_code") || ""}`)
