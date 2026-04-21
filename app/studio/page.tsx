@@ -876,7 +876,15 @@ export default function StudioPage() {
                   : <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>音频{Math.round(audioDuration)}秒，预计3-5分钟</div>;
               })()}
               {generatingVideo && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>⏳ 生成中（已耗时 {videoGenElapsed}s）</div>}
-              {rawVideoUrl && <div style={{ fontSize: 10, color: "#22d3ee", marginTop: 5 }}>✓ 数字人视频生成完成</div>}
+              {rawVideoUrl && (
+                <div style={{ marginTop: 7 }}>
+                  <video src={rawVideoUrl} controls style={{ width: "100%", borderRadius: 8, maxHeight: 160 }} />
+                  <a href={rawVideoUrl} download="digital_human.mp4" target="_blank"
+                    style={{ display: "block", marginTop: 5, padding: "6px", textAlign: "center" as const, borderRadius: 7, border: "1px solid #22d3ee", color: "#22d3ee", fontSize: 11, textDecoration: "none", background: "rgba(34,211,238,.06)" }}>
+                    ⬇ 下载数字人视频（无字幕BGM）
+                  </a>
+                </div>
+              )}
             </Section>
 
             <Section title="合并输出" icon="🎬">
