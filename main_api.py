@@ -783,6 +783,9 @@ def run_fetch_video(task_id, url, out_path, cookie):
             try:
                 r = get_whisper_model().transcribe(audio_path, language="zh")
                 transcript = r["text"]
+                try:
+                    import opencc; transcript = opencc.OpenCC('t2s').convert(transcript)
+                except: pass
             except Exception:
                 transcript = ""
         tasks[task_id] = {"status": "done", "video_url": f"{BACKEND_URL}/file/{task_id}/source.mp4", "transcript": transcript}
@@ -842,6 +845,9 @@ def run_download_transcribe(task_id, video_url, cookie, out_path):
             try:
                 r = get_whisper_model().transcribe(audio_path, language="zh")
                 transcript = r["text"]
+                try:
+                    import opencc; transcript = opencc.OpenCC('t2s').convert(transcript)
+                except: pass
             except Exception:
                 transcript = ""
         tasks[task_id] = {"status": "done", "video_url": f"{BACKEND_URL}/file/{task_id}/source.mp4", "transcript": transcript}
@@ -923,13 +929,18 @@ def run_liveportrait(task_id, source_path, audio_path, out_path):
             "--audio_path", audio_path,
             "--video_path", source_path,
         ], capture_output=True, text=True, cwd="/root/autodl-tmp/HeyGem-Linux-Python-Hack", timeout=600, env=env)
-        # HeyGem输出固定为1004-r.mp4
-        heygem_output = "/root/autodl-tmp/HeyGem-Linux-Python-Hack/1004-r.mp4"
+        heygem_dir = "/root/autodl-tmp/HeyGem-Linux-Python-Hack"
+        heygem_output = f"{heygem_dir}/1004-r.mp4"
+        if not os.path.exists(heygem_output):
+            import glob as _glob
+            mp4s = sorted(_glob.glob(f"{heygem_dir}/*.mp4"), key=os.path.getmtime, reverse=True)
+            if mp4s:
+                heygem_output = mp4s[0]
         if os.path.exists(heygem_output):
             shutil.copy(heygem_output, output_file)
             tasks[task_id] = {"status": "done", "type": "video", "video_url": f"{BACKEND_URL}/file/{task_id}/output.mp4"}
         else:
-            tasks[task_id] = {"status": "failed", "error": result.stderr[-300:] or "未生成视频"}
+            tasks[task_id] = {"status": "failed", "error": (result.stderr[-300:] if result.stderr else result.stdout[-300:]) or "未生成视频，请检查HeyGem配置"}
     except Exception as e:
         tasks[task_id] = {"status": "failed", "error": str(e)}
 
@@ -941,6 +952,11 @@ async def generate_video(source_video: UploadFile = File(...), audio_file: Uploa
     out_path = f"{OUTPUT_DIR}/{task_id}"
     os.makedirs(out_path, exist_ok=True)
     with open(source_path, "wb") as f: f.write(await source_video.read())
+    # 转码视频为标准h264格式，避免HeyGem解码问题
+    converted_path = f"/tmp/{task_id}_source_h264.mp4"
+    subprocess.run(["ffmpeg", "-y", "-i", source_path, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", converted_path], capture_output=True)
+    if os.path.exists(converted_path) and os.path.getsize(converted_path) > 0:
+        source_path = converted_path
     if audio_file and audio_file.filename:
         audio_path = f"/tmp/{task_id}_audio.mp3"
         with open(audio_path, "wb") as f: f.write(await audio_file.read())
@@ -1001,8 +1017,11 @@ if chunks:
 """
         env = os.environ.copy()
         env['LD_LIBRARY_PATH'] = '/root/miniconda3/envs/cosyvoice/lib/python3.10/site-packages/nvidia/cu13/lib:/usr/local/cuda/lib64:' + env.get('LD_LIBRARY_PATH', '')
+        script_path = f"{out_path}/cosyvoice_run.py"
+        with open(script_path, 'w', encoding='utf-8') as _sf:
+            _sf.write(script)
         result = subprocess.run(
-            ['/root/run_cosyvoice.sh', '-c', script],
+            ['/root/run_cosyvoice.sh', script_path],
             capture_output=True, text=True, timeout=300, env=env
         )
         if result.returncode != 0:
@@ -1048,7 +1067,11 @@ async def transcribe(audio: UploadFile = File(...)):
     subprocess.run(["ffmpeg", "-y", "-i", raw_path, "-ar", "16000", "-ac", "1", wav_path], capture_output=True)
     try:
         r = get_whisper_model().transcribe(wav_path, language="zh")
-        return JSONResponse({"success": True, "text": r["text"]})
+        text = r["text"]
+        try:
+            import opencc; text = opencc.OpenCC('t2s').convert(text)
+        except: pass
+        return JSONResponse({"success": True, "text": text})
     except Exception as e:
         return JSONResponse({"success": False, "error": str(e)})
 
@@ -1272,6 +1295,64 @@ async def list_invites(secret: str = ""):
         return JSONResponse({"success": False, "message": "无权限"}, status_code=403)
     data = load_invites()
     return JSONResponse({"success": True, "codes": data["codes"]})
+
+
+VOICE_PROFILE_DIR = "/root/autodl-tmp/voice_profiles"
+os.makedirs(VOICE_PROFILE_DIR, exist_ok=True)
+
+@app.post("/voice/save")
+async def save_voice_profile(
+    name: str = Form(...),
+    prompt_text: str = Form(...),
+    voice_sample: UploadFile = File(...)
+):
+    profile_dir = f"{VOICE_PROFILE_DIR}/{name}"
+    os.makedirs(profile_dir, exist_ok=True)
+    ext = voice_sample.filename.split(".")[-1].lower()
+    raw_path = f"{profile_dir}/sample.{ext}"
+    wav_path = f"{profile_dir}/sample.wav"
+    with open(raw_path, "wb") as f: f.write(await voice_sample.read())
+    subprocess.run(["ffmpeg", "-y", "-i", raw_path, "-ar", "16000", "-ac", "1", wav_path], capture_output=True)
+    with open(f"{profile_dir}/meta.json", "w") as f:
+        json.dump({"name": name, "prompt_text": prompt_text, "wav_path": wav_path}, f, ensure_ascii=False)
+    return JSONResponse({"success": True, "message": f"声音档案已保存"})
+
+@app.get("/voice/list")
+def list_voice_profiles():
+    profiles = []
+    if os.path.exists(VOICE_PROFILE_DIR):
+        for d in os.listdir(VOICE_PROFILE_DIR):
+            meta_path = f"{VOICE_PROFILE_DIR}/{d}/meta.json"
+            if os.path.exists(meta_path):
+                with open(meta_path) as f:
+                    profiles.append(json.load(f))
+    return JSONResponse({"success": True, "profiles": profiles})
+
+@app.delete("/voice/{name}")
+def delete_voice_profile(name: str):
+    profile_dir = f"{VOICE_PROFILE_DIR}/{name}"
+    if os.path.exists(profile_dir):
+        shutil.rmtree(profile_dir)
+        return JSONResponse({"success": True})
+    return JSONResponse({"success": False, "message": "档案不存在"})
+
+@app.post("/clone-tts-profile")
+async def clone_tts_with_profile(
+    text: str = Form(...),
+    profile_name: str = Form(...),
+    speed: float = Form(default=1.0)
+):
+    meta_path = f"{VOICE_PROFILE_DIR}/{profile_name}/meta.json"
+    if not os.path.exists(meta_path):
+        return JSONResponse({"success": False, "error": "声音档案不存在"}, status_code=404)
+    with open(meta_path) as f:
+        meta = json.load(f)
+    task_id = str(uuid.uuid4())[:8]
+    out_path = f"{OUTPUT_DIR}/{task_id}"
+    os.makedirs(out_path, exist_ok=True)
+    tasks[task_id] = {"status": "pending"}
+    threading.Thread(target=run_cosyvoice_tts, args=(task_id, text, meta["wav_path"], meta["prompt_text"], speed, out_path), daemon=True).start()
+    return JSONResponse({"success": True, "task_id": task_id})
 
 @app.get("/health")
 def health():
