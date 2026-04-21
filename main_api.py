@@ -952,16 +952,18 @@ async def generate_video(source_video: UploadFile = File(...), audio_file: Uploa
     out_path = f"{OUTPUT_DIR}/{task_id}"
     os.makedirs(out_path, exist_ok=True)
     with open(source_path, "wb") as f: f.write(await source_video.read())
-    # 转码视频为标准h264格式，避免HeyGem解码问题
+    # 转码为h264，去掉音频轨（HeyGem只需要视频）
     converted_path = f"/tmp/{task_id}_source_h264.mp4"
-    subprocess.run(["ffmpeg", "-y", "-i", source_path, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", converted_path], capture_output=True)
+    subprocess.run(["ffmpeg", "-y", "-i", source_path, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-an", converted_path], capture_output=True)
     if os.path.exists(converted_path) and os.path.getsize(converted_path) > 0:
         source_path = converted_path
+    # HeyGem需要wav格式音频
+    audio_path = f"/tmp/{task_id}_audio.wav"
     if audio_file and audio_file.filename:
-        audio_path = f"/tmp/{task_id}_audio.mp3"
-        with open(audio_path, "wb") as f: f.write(await audio_file.read())
+        raw_audio = f"/tmp/{task_id}_audio_raw"
+        with open(raw_audio, "wb") as f: f.write(await audio_file.read())
+        subprocess.run(["ffmpeg", "-y", "-i", raw_audio, "-ar", "16000", "-ac", "1", audio_path], capture_output=True)
     else:
-        audio_path = f"/tmp/{task_id}_audio.wav"
         subprocess.run(["ffmpeg", "-y", "-i", source_path, "-ar", "16000", "-ac", "1", audio_path], capture_output=True)
     tasks[task_id] = {"status": "pending"}
     threading.Thread(target=run_liveportrait, args=(task_id, source_path, audio_path, out_path), daemon=True).start()
