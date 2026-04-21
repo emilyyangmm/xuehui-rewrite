@@ -450,6 +450,7 @@ export default function StudioPage() {
         (data) => {
           clearInterval(videoGenTimer.current);
           setRawVideoUrl(data.video_url);
+          setFinalVideoUrl("");
           setGeneratingVideo(false);
         },
         (e) => { clearInterval(videoGenTimer.current); setErr(e); setGeneratingVideo(false); },
