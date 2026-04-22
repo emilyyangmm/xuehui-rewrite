@@ -197,6 +197,7 @@ export default function StudioPage() {
   const [history, setHistory] = useState<{task_id:string, video_url:string, time:string, subtitle:string}[]>([])
   const [copiedTitle, setCopiedTitle] = useState(-1);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpSection, setHelpSection] = useState(0);
 
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
@@ -574,6 +575,107 @@ export default function StudioPage() {
           </div>
         </div>
       )}
+      {/* 使用手册 */}
+      {helpOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setHelpOpen(false)}>
+          <div style={{ background: "#0f172a", borderRadius: 16, width: 640, maxHeight: "85vh", display: "flex", flexDirection: "column", border: "1px solid #1e293b" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #1e293b" }}>
+              <span style={{ fontWeight: 700, fontSize: 15 }}>📖 使用手册</span>
+              <button onClick={() => setHelpOpen(false)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 18 }}>✕</button>
+            </div>
+            <div style={{ display: "flex", borderBottom: "1px solid #1e293b", padding: "0 12px", gap: 4, flexShrink: 0, overflowX: "auto" }}>
+              {["注册与开机","获取API Key","获取Cookie","使用流程","常见问题"].map((t,i) => (
+                <button key={i} onClick={() => setHelpSection(i)} style={{ padding: "10px 12px", background: "none", border: "none", borderBottom: helpSection===i ? "2px solid #22d3ee" : "2px solid transparent", color: helpSection===i ? "#22d3ee" : "#64748b", cursor: "pointer", fontSize: 12, whiteSpace: "nowrap" }}>{t}</button>
+              ))}
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", fontSize: 13, lineHeight: 1.8, color: "#cbd5e1" }}>
+              {helpSection === 0 && <div>
+                <h3 style={{ color: "#e2e8f0", marginTop: 0 }}>注册 AutoDL 账号</h3>
+                <ol style={{ paddingLeft: 20, color: "#94a3b8" }}>
+                  <li>打开 <b style={{color:"#22d3ee"}}>autodl.com</b>，点击右上角注册，填写手机号完成实名认证</li>
+                  <li>联系管理员，提供你的 AutoDL <b>用户ID</b>（右上角头像 → 个人中心查看）</li>
+                  <li>管理员共享镜像后，进入 <b>镜像 → 共享给我的</b>，找到「数字人大师」→ 使用该镜像</li>
+                </ol>
+                <h3 style={{ color: "#e2e8f0" }}>最低配置要求</h3>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  {[["GPU","RTX 3090（推荐4090）"],["CPU","8核"],["内存","40GB"],["系统盘","30GB"],["数据盘","50GB"]].map(([k,v])=>(
+                    <tr key={k}><td style={{padding:"4px 8px",borderBottom:"1px solid #1e293b",color:"#94a3b8"}}>{k}</td><td style={{padding:"4px 8px",borderBottom:"1px solid #1e293b"}}>{v}</td></tr>
+                  ))}
+                </table>
+                <h3 style={{ color: "#e2e8f0" }}>启动服务</h3>
+                <p>实例开机后点击 <b>JupyterLab</b>，在终端运行：</p>
+                <code style={{ display: "block", background: "#0a0f1e", padding: "10px 14px", borderRadius: 8, fontSize: 11, color: "#22d3ee", wordBreak: "break-all" }}>
+                  nohup bash -c "cd /root/autodl-tmp && python -m uvicorn main_api:app --host 0.0.0.0 --port 6006" &gt; /tmp/api.log 2&gt;&amp;1 &amp;
+                </code>
+                <p style={{color:"#64748b",fontSize:12}}>看到 [1] 数字即启动成功，等30秒后使用。</p>
+                <h3 style={{ color: "#e2e8f0" }}>获取服务器地址</h3>
+                <p>AutoDL 控制台 → 实例详情 → 找到公网地址，格式：</p>
+                <code style={{ display: "block", background: "#0a0f1e", padding: "8px 14px", borderRadius: 8, fontSize: 11, color: "#22d3ee" }}>https://u123456-xxxx.westc.seetacloud.com:8443</code>
+                <p style={{color:"#64748b",fontSize:12}}>复制后填入软件右上角 ⚙️ → 服务器地址。</p>
+              </div>}
+              {helpSection === 1 && <div>
+                <h3 style={{ color: "#e2e8f0", marginTop: 0 }}>获取免费阿里云 Qwen API Key</h3>
+                <ol style={{ paddingLeft: 20, color: "#94a3b8" }}>
+                  <li>打开 <b style={{color:"#22d3ee"}}>dashscope.aliyun.com</b>，支付宝扫码登录</li>
+                  <li>进入控制台 → <b>API-KEY管理</b> → 点击「创建新的API-KEY」</li>
+                  <li>复制生成的 Key（格式：<code style={{color:"#22d3ee"}}>sk-xxxxxxxx</code>）</li>
+                  <li>填入软件右上角 ⚙️ → Qwen API Key</li>
+                </ol>
+                <div style={{ background: "rgba(34,211,238,.08)", border: "1px solid rgba(34,211,238,.2)", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#22d3ee", marginTop: 16 }}>
+                  ✅ 创建后立即可用，无需单独开通模型，新用户有免费额度
+                </div>
+              </div>}
+              {helpSection === 2 && <div>
+                <h3 style={{ color: "#e2e8f0", marginTop: 0 }}>获取抖音 Cookie</h3>
+                <p style={{color:"#94a3b8"}}>Cookie 用于拉取博主视频，约7-30天需要更新一次。</p>
+                <ol style={{ paddingLeft: 20, color: "#94a3b8" }}>
+                  <li>用电脑浏览器打开 <b style={{color:"#22d3ee"}}>douyin.com</b> 并登录账号</li>
+                  <li>按 <b>F12</b> → 点击 <b>Network（网络）</b> 标签</li>
+                  <li>刷新页面 → 点击左侧任意一条 douyin.com 请求</li>
+                  <li>右侧找到 <b>Request Headers</b> → 找到 <b>cookie:</b> 行</li>
+                  <li>右键 → Copy value，粘贴到软件设置中</li>
+                </ol>
+                <div style={{ background: "rgba(248,113,113,.08)", border: "1px solid rgba(248,113,113,.2)", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#f87171", marginTop: 16 }}>
+                  ⚠ 不要在控制台用 copy(document.cookie)，会获取不完整
+                </div>
+              </div>}
+              {helpSection === 3 && <div>
+                <h3 style={{ color: "#e2e8f0", marginTop: 0 }}>使用流程</h3>
+                {[
+                  ["第一步：账号设置", "点击右上角 ⚙️，填入服务器地址、抖音Cookie、Qwen API Key、邀请码并保存"],
+                  ["第二步：获取文案", "粘贴博主主页链接 → 拉取 → 点击视频提取文案；也可直接在「原始文案」框手动粘贴"],
+                  ["第三步：改写文案", "选择脚本类型和爆款元素 → 点击「薛辉改写」。改写结果可直接手动修改，满意后再继续"],
+                  ["第四步：生成口播音频", "系统声音：选择音色直接生成。克隆声音：上传15-30秒本人录音样本，识别文字，保存音色后生成"],
+                  ["第五步：生成数字人视频", "上传5-15秒正面对镜视频 → 生成。音频超60秒自动分段处理，时间较长请耐心等待"],
+                  ["第六步：合并输出（可选）", "选择BGM和字体 → 一键合并，可添加字幕和背景音乐"],
+                ].map(([title, desc]) => (
+                  <div key={title as string} style={{ marginBottom: 16, background: "#0a0f1e", borderRadius: 10, padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 600, color: "#e2e8f0", marginBottom: 4, fontSize: 13 }}>{title as string}</div>
+                    <div style={{ color: "#64748b", fontSize: 12 }}>{desc as string}</div>
+                  </div>
+                ))}
+              </div>}
+              {helpSection === 4 && <div>
+                <h3 style={{ color: "#e2e8f0", marginTop: 0 }}>常见问题</h3>
+                {[
+                  ["拉取博主视频失败？", "Cookie 过期，重新获取并更新到设置中。"],
+                  ["标题生成报错？", "Qwen API Key 未填或失效，重新申请填入。"],
+                  ["数字人生成很慢？", "正常现象，1分钟音频约需5-10分钟，请耐心等待。超过60秒音频会自动分段处理。"],
+                  ["关机后数据会丢失吗？", "不会，数据保存在数据盘，关机不影响任何数据。"],
+                  ["软件打开后一直转圈？", "服务未启动，在 JupyterLab 终端重新运行启动命令。"],
+                  ["声音生成失败？", "可能是网络偶发问题，重新点击生成即可。"],
+                ].map(([q, a]) => (
+                  <div key={q as string} style={{ marginBottom: 12, borderBottom: "1px solid #1e293b", paddingBottom: 12 }}>
+                    <div style={{ fontWeight: 600, color: "#e2e8f0", marginBottom: 4 }}>Q：{q as string}</div>
+                    <div style={{ color: "#64748b", fontSize: 12 }}>A：{a as string}</div>
+                  </div>
+                ))}
+              </div>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 设置面板 */}
       {settingsOpen && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -625,6 +727,7 @@ export default function StudioPage() {
         <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#818cf8,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>⚡</div>
         <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "0.1em", background: "linear-gradient(90deg,#818cf8,#22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>DIGITAL STUDIO</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={() => { setHelpSection(0); setHelpOpen(true); }} style={{ background: "none", border: "1px solid #1e293b", borderRadius: 6, cursor: "pointer", fontSize: 12, padding: "3px 10px", color: "#94a3b8" }}>使用手册</button>
           <button onClick={openSettings} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: "4px 8px", color: "#94a3b8" }}>⚙️</button>
           {err && <span style={{ fontSize: 11, color: "#f87171", background: "rgba(248,113,113,.1)", padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(248,113,113,.2)", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⚠ {err}</span>}
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22d3ee", boxShadow: "0 0 6px #22d3ee" }} />
