@@ -187,6 +187,7 @@ export default function StudioPage() {
   const [err, setErr] = useState("");
   const [history, setHistory] = useState<{task_id:string, video_url:string, time:string, subtitle:string}[]>([])
   const [copiedTitle, setCopiedTitle] = useState(-1);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
