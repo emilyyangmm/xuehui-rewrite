@@ -268,7 +268,7 @@ export default function StudioPage() {
         const payload = { video_url: v.video_url, cookie };
         console.log("发送payload:", JSON.stringify(payload).slice(0, 100));
         
-        const res = await fetch("/api/asr", {
+        const res = await fetch(`${getApi()}/fetch-video`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
