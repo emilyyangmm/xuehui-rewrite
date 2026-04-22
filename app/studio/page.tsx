@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 function getApi() {
   if (typeof localStorage !== "undefined") {
@@ -102,6 +103,14 @@ function pollTask(taskId: string, onDone: (d: any) => void, onError: (e: string)
 }
 
 export default function StudioPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!localStorage.getItem("invite_code")) {
+      router.replace("/invite");
+    }
+  }, [router]);
+
   const openSettings = () => {
     setTempCookie(localStorage.getItem("douyin_cookie") || "");
     setTempQwenKey(localStorage.getItem("qwen_key") || "");
