@@ -237,10 +237,10 @@ export default function StudioPage() {
         return;
       }
 
-      // 博主主页：拉取视频列表（走 Vercel，绕过云服务器 IP 封锁）
-      const res = await fetch("/api/user-videos", {
+      // 博主主页：走后端拉取（AutoDL在国内，访问抖音稳定）
+      const res = await fetch("/api/proxy", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Backend-URL": getApi(), "X-Endpoint": "user-videos" },
         body: JSON.stringify({
           url: douyinUrl,
           sort_by: sortBy === "like" ? "likes" : "play",
