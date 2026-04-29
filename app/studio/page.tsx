@@ -218,9 +218,9 @@ export default function StudioPage() {
       if (isSingleVideo(douyinUrl)) {
         // 单个视频：用 yt-dlp 直接下载（自动处理反爬）
         setErr("正在下载视频并提取文案，约1-2分钟…");
-        const dlRes = await fetch(`${getApi()}/download-transcribe`, {
+        const dlRes = await fetch(`/api/proxy`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Backend-URL": getApi(), "X-Endpoint": "download-transcribe" },
           body: JSON.stringify({ video_url: douyinUrl, cookie }),
         });
         const dlData = await dlRes.json();
@@ -278,9 +278,9 @@ export default function StudioPage() {
         const payload = { video_url: v.video_url, cookie };
         console.log("发送payload:", JSON.stringify(payload).slice(0, 100));
         
-        const res = await fetch(`${getApi()}/fetch-video`, {
+        const res = await fetch(`/api/asr`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Backend-URL": getApi() },
           body: JSON.stringify(payload),
         });
         const d = await res.json();
