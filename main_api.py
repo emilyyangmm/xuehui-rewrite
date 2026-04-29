@@ -811,16 +811,12 @@ def run_download_transcribe(task_id, video_url, cookie, out_path):
         ydl_opts = {
             "outtmpl": video_path, "quiet": True, "no_warnings": True,
             "merge_output_format": "mp4",
+            "http_headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://www.douyin.com/",
+                "Cookie": cookie,
+            },
         }
-        if cookie:
-            cookie_file = f"{out_path}/cookies.txt"
-            with open(cookie_file, "w") as cf:
-                cf.write("# Netscape HTTP Cookie File\n")
-                for item in cookie.split("; "):
-                    if "=" in item:
-                        k, v = item.split("=", 1)
-                        cf.write(f".douyin.com\tTRUE\t/\tFALSE\t{int(time.time()) + 86400*30}\t{k.strip()}\t{v.strip()}\n")
-            ydl_opts["cookiefile"] = cookie_file
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ret = ydl.download([video_url])
         if ret != 0 or not os.path.exists(video_path):
