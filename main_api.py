@@ -805,32 +805,22 @@ def run_download_transcribe(task_id, video_url, cookie, out_path):
     tasks[task_id] = {"status": "running", "step": "下载视频"}
     video_url = normalize_douyin_url(video_url)
     try:
-        import yt_dlp, http.cookiejar
+        import yt_dlp
         video_path = f"{out_path}/source.mp4"
-        jar = http.cookiejar.CookieJar()
-        if cookie:
-            import urllib.request as _ur
-            opener = _ur.build_opener(_ur.HTTPCookieProcessor(jar))
-            req = _ur.Request("https://www.douyin.com", headers={"Cookie": cookie, "User-Agent": "Mozilla/5.0"})
-            try: opener.open(req, timeout=5)
-            except: pass
-            # 手动添加 cookie 到 jar
-            for item in cookie.split("; "):
-                if "=" in item:
-                    k, v = item.split("=", 1)
-                    c = http.cookiejar.Cookie(
-                        version=0, name=k.strip(), value=v.strip(),
-                        port=None, port_specified=False,
-                        domain=".douyin.com", domain_specified=True, domain_initial_dot=True,
-                        path="/", path_specified=True, secure=False,
-                        expires=int(time.time()) + 86400 * 30,
-                        discard=False, comment=None, comment_url=None, rest={}
-                    )
-                    jar.set_cookie(c)
+        cookie_file = None
         ydl_opts = {
             "outtmpl": video_path, "quiet": True, "no_warnings": True,
-            "merge_output_format": "mp4", "cookiejar": jar,
+            "merge_output_format": "mp4",
         }
+        if cookie:
+            cookie_file = f"{out_path}/cookies.txt"
+            with open(cookie_file, "w") as cf:
+                cf.write("# Netscape HTTP Cookie File\n")
+                for item in cookie.split("; "):
+                    if "=" in item:
+                        k, v = item.split("=", 1)
+                        cf.write(f".douyin.com\tTRUE\t/\tFALSE\t{int(time.time()) + 86400*30}\t{k.strip()}\t{v.strip()}\n")
+            ydl_opts["cookiefile"] = cookie_file
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ret = ydl.download([video_url])
         if ret != 0 or not os.path.exists(video_path):
