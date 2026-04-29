@@ -93,7 +93,10 @@ function getAuthHeaders(): Record<string, string> {
 function pollTask(taskId: string, onDone: (d: any) => void, onError: (e: string) => void, onProgress?: (step: string) => void) {
   const iv = setInterval(async () => {
     try {
-      const r = await fetch(`${getApi()}/status/${taskId}`, { headers: getAuthHeaders() });
+      const r = await fetch(`/api/proxy`, {
+        method: "GET",
+        headers: { "X-Backend-URL": getApi(), "X-Endpoint": `status/${taskId}` },
+      });
       const d = await r.json();
       if (d.status === "done") { clearInterval(iv); onDone(d); }
       else if (d.status === "failed") { clearInterval(iv); onError(d.error || "生成失败"); }
