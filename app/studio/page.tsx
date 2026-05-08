@@ -205,6 +205,7 @@ export default function StudioPage() {
   // 智能混剪
   const [mixOpen, setMixOpen] = useState(false);
   const [mixMaterials, setMixMaterials] = useState<File[]>([]);
+  const [mixDescs, setMixDescs] = useState<string[]>([]);
   const [mixing, setMixing] = useState(false);
   const [mixResult, setMixResult] = useState("");
   const [mixErr, setMixErr] = useState("");
@@ -588,14 +589,27 @@ export default function StudioPage() {
                 + 添加素材
               </button>
               <input ref={mixMatRef} type="file" accept="image/*,video/*" multiple style={{ display: "none" }}
-                onChange={e => { const files = Array.from(e.target.files || []); setMixMaterials(prev => [...prev, ...files]); e.target.value = ""; }} />
+                onChange={e => {
+                  const files = Array.from(e.target.files || []);
+                  setMixMaterials(prev => [...prev, ...files]);
+                  setMixDescs(prev => [...prev, ...files.map(() => "")]);
+                  e.target.value = "";
+                }} />
               {mixMaterials.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 160, overflowY: "auto" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 200, overflowY: "auto" }}>
                   {mixMaterials.map((f, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1e293b", borderRadius: 5, padding: "5px 10px" }}>
-                      <span style={{ fontSize: 11, color: "#cbd5e1" }}>{f.name} <span style={{ color: "#475569" }}>({(f.size / 1024).toFixed(0)}KB)</span></span>
-                      <button onClick={() => setMixMaterials(prev => prev.filter((_, j) => j !== i))}
-                        style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 13, padding: "0 4px" }}>✕</button>
+                    <div key={i} style={{ background: "#1e293b", borderRadius: 6, padding: "7px 10px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <span style={{ fontSize: 11, color: "#cbd5e1" }}>{f.name} <span style={{ color: "#475569" }}>({(f.size / 1024).toFixed(0)}KB)</span></span>
+                        <button onClick={() => { setMixMaterials(prev => prev.filter((_, j) => j !== i)); setMixDescs(prev => prev.filter((_, j) => j !== i)); }}
+                          style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 13, padding: "0 4px" }}>✕</button>
+                      </div>
+                      <input
+                        value={mixDescs[i] || ""}
+                        onChange={e => setMixDescs(prev => prev.map((d, j) => j === i ? e.target.value : d))}
+                        placeholder="描述这个素材内容，如：店内装修环境、招牌产品展示…"
+                        style={{ width: "100%", background: "#0a0f1e", border: "1px solid #334155", borderRadius: 4, padding: "4px 8px", color: "#e2e8f0", fontSize: 10, boxSizing: "border-box" as const }}
+                      />
                     </div>
                   ))}
                 </div>
@@ -612,7 +626,7 @@ export default function StudioPage() {
                 try {
                   const fd = new FormData();
                   fd.append("dh_task_id", mixDhTaskId);
-                  mixMaterials.forEach(f => fd.append("materials", f));
+                  mixMaterials.forEach((f, i) => { fd.append("materials", f); fd.append("descs", mixDescs[i] || f.name); });
                   const qwenKey = localStorage.getItem("qwen_key") || "";
                   const r = await fetch(`/api/proxy`, {
                     method: "POST",

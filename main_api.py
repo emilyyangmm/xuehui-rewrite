@@ -1447,18 +1447,30 @@ MIX_ASSIGN_PROMPT = """你是一个专业的短视频剪辑师AI助手。
 [{"start":0.0,"end":3.2,"material":null},{"start":3.2,"end":7.5,"material":"filename.jpg"},...]"""
 
 
-def ai_assign_materials(segments, material_names, api_key):
+def ai_assign_materials(segments, material_names, api_key, material_descs=None):
     seg_text = "\n".join([f"[{s['start']:.1f}s-{s['end']:.1f}s] {s['text']}" for s in segments])
-    user_msg = f"口播片段：\n{seg_text}\n\n可用素材：{', '.join(material_names)}\n\n请分配。"
+    if material_descs:
+        mat_list = ", ".join([f"{n}（{material_descs.get(n, '')}）" for n in material_names])
+    else:
+        mat_list = ", ".join(material_names)
+    user_msg = f"口播片段：\n{seg_text}\n\n可用素材：{mat_list}\n\n请分配，尽量多穿插素材。"
     raw = call_qwen(MIX_ASSIGN_PROMPT, user_msg, api_key)
     try:
         s = raw.index('['); e = raw.rindex(']') + 1
-        return json.loads(raw[s:e])
+        assignments = json.loads(raw[s:e])
     except Exception:
-        return [{"start": seg['start'], "end": seg['end'], "material": None} for seg in segments]
+        assignments = [{"start": seg['start'], "end": seg['end'], "material": None} for seg in segments]
+
+    # 兜底：如果AI分配的素材不足30%，平均分配素材
+    assigned = sum(1 for a in assignments if a.get('material'))
+    if material_names and assigned < max(1, len(assignments) * 0.3):
+        for i, a in enumerate(assignments):
+            a['material'] = material_names[i % len(material_names)]
+
+    return assignments
 
 
-def run_mix_video(task_id, dh_video_path, material_paths, out_path, api_key):
+def run_mix_video(task_id, dh_video_path, material_paths, out_path, api_key, material_descs=None):
     try:
         tasks[task_id] = {"status": "running", "step": "转录口播文案"}
 
@@ -1474,7 +1486,7 @@ def run_mix_video(task_id, dh_video_path, material_paths, out_path, api_key):
             return
 
         tasks[task_id]["step"] = "AI智能分配素材"
-        assignments = ai_assign_materials(segments, list(material_paths.keys()), api_key)
+        assignments = ai_assign_materials(segments, list(material_paths.keys()), api_key, material_descs)
 
         tasks[task_id]["step"] = "合成视频中"
 
@@ -1540,6 +1552,7 @@ async def mix_video_endpoint(
     request: Request,
     dh_task_id: str = Form(...),
     materials: List[UploadFile] = File(...),
+    descs: List[str] = Form(default=[]),
 ):
     api_key = get_qwen_key(request)
     if not api_key:
@@ -1554,17 +1567,19 @@ async def mix_video_endpoint(
     os.makedirs(out_path, exist_ok=True)
 
     material_paths = {}
-    for mat in materials:
-        safe_name = os.path.basename(mat.filename or f"mat_{len(material_paths)}.jpg")
-        mat_path = f"{out_path}/mat_{safe_name}"
+    material_descs = {}
+    for i, mat in enumerate(materials):
+        safe_name = f"mat{i}_{os.path.basename(mat.filename or f'material{i}.jpg')}"
+        mat_path = f"{out_path}/{safe_name}"
         with open(mat_path, "wb") as f:
             f.write(await mat.read())
         material_paths[safe_name] = mat_path
+        material_descs[safe_name] = descs[i] if i < len(descs) else safe_name
 
     tasks[task_id] = {"status": "pending"}
     threading.Thread(
         target=run_mix_video,
-        args=(task_id, dh_video_path, material_paths, out_path, api_key),
+        args=(task_id, dh_video_path, material_paths, out_path, api_key, material_descs),
         daemon=True
     ).start()
 
