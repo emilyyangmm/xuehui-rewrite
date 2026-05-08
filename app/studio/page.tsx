@@ -202,6 +202,15 @@ export default function StudioPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpSection, setHelpSection] = useState(0);
 
+  // 智能混剪
+  const [mixOpen, setMixOpen] = useState(false);
+  const [mixMaterials, setMixMaterials] = useState<File[]>([]);
+  const [mixing, setMixing] = useState(false);
+  const [mixResult, setMixResult] = useState("");
+  const [mixErr, setMixErr] = useState("");
+  const [mixStep, setMixStep] = useState("");
+  const mixMatRef = useRef<HTMLInputElement>(null);
+
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
   const voiceRef = useRef<HTMLInputElement>(null);
@@ -543,8 +552,103 @@ export default function StudioPage() {
     loadProfiles();
   }, []);
 
+  const mixDhTaskId = rawVideoUrl ? rawVideoUrl.split("/file/")[1]?.split("/")[0] || "" : "";
+
   return (
     <>
+      {/* 智能混剪弹窗 */}
+      {mixOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.88)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#0f172a", borderRadius: 16, padding: 28, width: 500, border: "1px solid #1e293b", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#fbbf24" }}>智能混剪</div>
+                <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>AI自动根据口播内容，在合适的位置插入你的素材</div>
+              </div>
+              <button onClick={() => setMixOpen(false)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 18, padding: "0 4px" }}>✕</button>
+            </div>
+
+            {/* DH Task ID */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>数字人视频 Task ID</div>
+              <div style={{ fontSize: 11, color: "#475569", marginBottom: 4 }}>步骤③生成数字人视频后，系统自动填入；也可手动输入</div>
+              <input
+                value={mixDhTaskId}
+                readOnly
+                placeholder={mixDhTaskId ? mixDhTaskId : "请先在主流程生成数字人视频"}
+                style={{ width: "100%", background: "#1e293b", border: `1px solid ${mixDhTaskId ? "#f59e0b55" : "#334155"}`, borderRadius: 6, padding: "7px 10px", color: mixDhTaskId ? "#fbbf24" : "#475569", fontSize: 11, boxSizing: "border-box" }}
+              />
+            </div>
+
+            {/* Materials upload */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>上传素材（图片/视频，可多选）</div>
+              <div style={{ fontSize: 11, color: "#475569", marginBottom: 8 }}>建议使用图片（jpg/png），视频素材请控制在 10MB 以内</div>
+              <button onClick={() => mixMatRef.current?.click()} style={{ padding: "7px 16px", background: "#1e293b", border: "1px solid #334155", borderRadius: 6, color: "#94a3b8", fontSize: 11, cursor: "pointer", marginBottom: 8 }}>
+                + 添加素材
+              </button>
+              <input ref={mixMatRef} type="file" accept="image/*,video/*" multiple style={{ display: "none" }}
+                onChange={e => { const files = Array.from(e.target.files || []); setMixMaterials(prev => [...prev, ...files]); e.target.value = ""; }} />
+              {mixMaterials.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 160, overflowY: "auto" }}>
+                  {mixMaterials.map((f, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1e293b", borderRadius: 5, padding: "5px 10px" }}>
+                      <span style={{ fontSize: 11, color: "#cbd5e1" }}>{f.name} <span style={{ color: "#475569" }}>({(f.size / 1024).toFixed(0)}KB)</span></span>
+                      <button onClick={() => setMixMaterials(prev => prev.filter((_, j) => j !== i))}
+                        style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 13, padding: "0 4px" }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Submit */}
+            <button
+              disabled={mixing || !mixDhTaskId || mixMaterials.length === 0}
+              onClick={async () => {
+                if (!mixDhTaskId) { setMixErr("请先在主流程生成数字人视频"); return; }
+                if (mixMaterials.length === 0) { setMixErr("请至少上传一个素材"); return; }
+                setMixing(true); setMixErr(""); setMixResult(""); setMixStep("上传素材中...");
+                try {
+                  const fd = new FormData();
+                  fd.append("dh_task_id", mixDhTaskId);
+                  mixMaterials.forEach(f => fd.append("materials", f));
+                  const qwenKey = localStorage.getItem("qwen_key") || "";
+                  const r = await fetch(`/api/proxy`, {
+                    method: "POST",
+                    headers: { "X-Backend-URL": getApi(), "X-Endpoint": "mix-video", "X-Qwen-Key": qwenKey },
+                    body: fd,
+                  });
+                  const d = await r.json();
+                  if (!d.success) throw new Error(d.error || "提交失败");
+                  setMixStep("AI分析文案中...");
+                  pollTask(d.task_id,
+                    (sd) => { setMixResult(sd.video_url); setMixing(false); setMixStep(""); },
+                    (e) => { setMixErr(e); setMixing(false); setMixStep(""); },
+                    (step) => setMixStep(step)
+                  );
+                } catch (e: any) { setMixErr(e.message); setMixing(false); setMixStep(""); }
+              }}
+              style={{ width: "100%", padding: "11px", background: (mixing || !mixDhTaskId || mixMaterials.length === 0) ? "#1e293b" : "linear-gradient(135deg,#f59e0b,#ef4444)", border: "none", borderRadius: 8, color: (mixing || !mixDhTaskId || mixMaterials.length === 0) ? "#475569" : "white", fontSize: 14, fontWeight: 700, cursor: (mixing || !mixDhTaskId || mixMaterials.length === 0) ? "not-allowed" : "pointer" }}
+            >
+              {mixing ? `⏳ ${mixStep || "处理中..."}` : "开始智能混剪"}
+            </button>
+
+            {mixErr && <div style={{ marginTop: 10, fontSize: 12, color: "#f87171" }}>⚠ {mixErr}</div>}
+
+            {mixResult && (
+              <div style={{ marginTop: 16 }}>
+                <video src={mixResult} controls style={{ width: "100%", borderRadius: 8, maxHeight: 360 }} />
+                <a href={mixResult} download="mixed_video.mp4" target="_blank" rel="noreferrer"
+                  style={{ display: "block", textAlign: "center" as const, marginTop: 8, padding: "9px", border: "1px solid #f59e0b", borderRadius: 6, color: "#fbbf24", textDecoration: "none", fontSize: 12, fontWeight: 600 }}>
+                  ⬇ 下载混剪视频
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 登录引导弹窗 */}
       {qrModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -730,6 +834,7 @@ export default function StudioPage() {
         <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#818cf8,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>⚡</div>
         <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "0.1em", background: "linear-gradient(90deg,#818cf8,#22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>DIGITAL STUDIO</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={() => { setMixOpen(true); setMixResult(""); setMixErr(""); }} style={{ background: "linear-gradient(135deg,#f59e0b88,#ef444488)", border: "1px solid #f59e0b55", borderRadius: 6, cursor: "pointer", fontSize: 12, padding: "3px 10px", color: "#fbbf24", fontWeight: 600 }}>智能混剪</button>
           <button onClick={() => { setHelpSection(0); setHelpOpen(true); }} style={{ background: "none", border: "1px solid #1e293b", borderRadius: 6, cursor: "pointer", fontSize: 12, padding: "3px 10px", color: "#94a3b8" }}>使用手册</button>
           <button onClick={openSettings} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: "4px 8px", color: "#94a3b8" }}>⚙️</button>
           {err && <span style={{ fontSize: 11, color: "#f87171", background: "rgba(248,113,113,.1)", padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(248,113,113,.2)", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⚠ {err}</span>}

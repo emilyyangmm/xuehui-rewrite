@@ -1,4 +1,5 @@
 import subprocess, uuid, os, threading, asyncio, json, re, hashlib, socket, time, shutil, math
+from typing import List
 import edge_tts
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -804,23 +805,6 @@ def run_download_transcribe(task_id, video_url, cookie, out_path):
     """复用 run_fetch_video 下载单个视频并转录"""
     video_url = normalize_douyin_url(video_url)
     run_fetch_video(task_id, video_url, out_path, cookie)
-        tasks[task_id]["step"] = "提取音频"
-        audio_path = f"{out_path}/audio.wav"
-        subprocess.run(["ffmpeg", "-y", "-i", video_path, "-ar", "16000", "-ac", "1", audio_path], capture_output=True, timeout=60)
-        tasks[task_id]["step"] = "语音转文字"
-        transcript = ""
-        if os.path.exists(audio_path):
-            try:
-                r = get_whisper_model().transcribe(audio_path, language="zh")
-                transcript = r["text"]
-                try:
-                    import opencc; transcript = opencc.OpenCC('t2s').convert(transcript)
-                except: pass
-            except Exception:
-                transcript = ""
-        tasks[task_id] = {"status": "done", "video_url": f"{BACKEND_URL}/file/{task_id}/source.mp4", "transcript": transcript}
-    except Exception as e:
-        tasks[task_id] = {"status": "failed", "error": str(e)}
 
 @app.post("/download-transcribe")
 async def download_transcribe(request: Request):
@@ -1445,6 +1429,147 @@ async def poll_douyin_qrcode(token: str):
             return JSONResponse({"status": "waiting"})
     except Exception as e:
         return JSONResponse({"status": "error", "error": str(e)})
+
+# ===================================================
+# 智能混剪
+# ===================================================
+MIX_ASSIGN_PROMPT = """你是一个专业的短视频剪辑师AI助手。
+用户有一段数字人口播视频，需要在合适的位置插入门店/产品素材，增强视觉吸引力。
+
+根据口播文案片段（含时间戳）和可用素材列表，决定每个片段是否插入素材。
+
+插入原则：
+- 提到具体场景、产品、服务、装修、环境时 → 插入对应素材
+- 纯情感表达、问候、呼吁关注、开头结尾 → 保留数字人（material设为null）
+- 同一素材可重复使用，尽量丰富穿插
+
+严格返回JSON数组，不要多余内容：
+[{"start":0.0,"end":3.2,"material":null},{"start":3.2,"end":7.5,"material":"filename.jpg"},...]"""
+
+
+def ai_assign_materials(segments, material_names, api_key):
+    seg_text = "\n".join([f"[{s['start']:.1f}s-{s['end']:.1f}s] {s['text']}" for s in segments])
+    user_msg = f"口播片段：\n{seg_text}\n\n可用素材：{', '.join(material_names)}\n\n请分配。"
+    raw = call_qwen(MIX_ASSIGN_PROMPT, user_msg, api_key)
+    try:
+        s = raw.index('['); e = raw.rindex(']') + 1
+        return json.loads(raw[s:e])
+    except Exception:
+        return [{"start": seg['start'], "end": seg['end'], "material": None} for seg in segments]
+
+
+def run_mix_video(task_id, dh_video_path, material_paths, out_path, api_key):
+    try:
+        tasks[task_id] = {"status": "running", "step": "转录口播文案"}
+
+        audio_path = f"{out_path}/dh_audio.wav"
+        subprocess.run(["ffmpeg", "-y", "-i", dh_video_path, "-ar", "16000", "-ac", "1", audio_path], capture_output=True)
+
+        model = get_whisper_model()
+        result = model.transcribe(audio_path, language="zh")
+        segments = [{"start": s["start"], "end": s["end"], "text": s["text"].strip()} for s in result["segments"]]
+
+        if not segments:
+            tasks[task_id] = {"status": "failed", "error": "未能提取口播文案"}
+            return
+
+        tasks[task_id]["step"] = "AI智能分配素材"
+        assignments = ai_assign_materials(segments, list(material_paths.keys()), api_key)
+
+        tasks[task_id]["step"] = "合成视频中"
+
+        from moviepy.editor import VideoFileClip, ImageClip, concatenate_videoclips
+
+        dh_clip = VideoFileClip(dh_video_path)
+        w, h = dh_clip.size
+        fps = dh_clip.fps or 25
+        total_dur = dh_clip.duration
+        audio = dh_clip.audio
+
+        result_clips = []
+        for seg in assignments:
+            start = max(0.0, float(seg.get("start", 0)))
+            end = min(float(seg.get("end", total_dur)), total_dur)
+            if end <= start:
+                continue
+            duration = end - start
+            mat_name = seg.get("material")
+
+            if mat_name and mat_name in material_paths:
+                mat_path = material_paths[mat_name]
+                ext = mat_path.lower().rsplit(".", 1)[-1]
+                if ext in ("jpg", "jpeg", "png", "webp", "gif", "bmp"):
+                    clip = ImageClip(mat_path).resize((w, h)).set_duration(duration).set_fps(fps)
+                else:
+                    mat_clip = VideoFileClip(mat_path).without_audio().resize((w, h))
+                    if mat_clip.duration >= duration:
+                        clip = mat_clip.subclip(0, duration)
+                    else:
+                        repeats = math.ceil(duration / mat_clip.duration)
+                        looped = concatenate_videoclips([mat_clip] * repeats)
+                        clip = looped.subclip(0, duration)
+            else:
+                clip = dh_clip.subclip(start, min(end, total_dur)).without_audio()
+
+            result_clips.append(clip)
+
+        if not result_clips:
+            tasks[task_id] = {"status": "failed", "error": "没有可合成的片段"}
+            return
+
+        final_video = concatenate_videoclips(result_clips, method="compose")
+        final_audio = audio.subclip(0, min(final_video.duration, audio.duration))
+        final = final_video.set_audio(final_audio)
+
+        out_video = f"{out_path}/mixed.mp4"
+        final.write_videofile(out_video, codec="libx264", audio_codec="aac", fps=fps, logger=None)
+
+        try: dh_clip.close()
+        except: pass
+        try: final.close()
+        except: pass
+
+        tasks[task_id] = {"status": "done", "video_url": f"{BACKEND_URL}/file/{task_id}/mixed.mp4"}
+
+    except Exception as e:
+        tasks[task_id] = {"status": "failed", "error": str(e)}
+
+
+@app.post("/mix-video")
+async def mix_video_endpoint(
+    request: Request,
+    dh_task_id: str = Form(...),
+    materials: List[UploadFile] = File(...),
+):
+    api_key = get_qwen_key(request)
+    if not api_key:
+        return JSONResponse({"error": "缺少Qwen API Key，请在设置中填写"}, status_code=400)
+
+    dh_video_path = f"{OUTPUT_DIR}/{dh_task_id}/output.mp4"
+    if not os.path.exists(dh_video_path):
+        return JSONResponse({"error": f"找不到数字人视频，task_id: {dh_task_id}"}, status_code=404)
+
+    task_id = str(uuid.uuid4())[:8]
+    out_path = f"{OUTPUT_DIR}/{task_id}"
+    os.makedirs(out_path, exist_ok=True)
+
+    material_paths = {}
+    for mat in materials:
+        safe_name = os.path.basename(mat.filename or f"mat_{len(material_paths)}.jpg")
+        mat_path = f"{out_path}/mat_{safe_name}"
+        with open(mat_path, "wb") as f:
+            f.write(await mat.read())
+        material_paths[safe_name] = mat_path
+
+    tasks[task_id] = {"status": "pending"}
+    threading.Thread(
+        target=run_mix_video,
+        args=(task_id, dh_video_path, material_paths, out_path, api_key),
+        daemon=True
+    ).start()
+
+    return JSONResponse({"success": True, "task_id": task_id})
+
 
 if __name__ == "__main__":
     import uvicorn
